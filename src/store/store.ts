@@ -1,0 +1,264 @@
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { categorize } from '../lib/analysis';
+import { importHash, type ImportedRow } from '../lib/csv';
+import { DEFAULT_CATEGORIES, DEFAULT_RULES } from '../lib/defaults';
+import { toCents, uid } from '../lib/format';
+import type {
+  Account,
+  Budget,
+  Category,
+  CsvMapping,
+  Goal,
+  NetWorthSnapshot,
+  Rule,
+  Settings,
+  Transaction,
+} from '../lib/types';
+import { emptyProfile, type TaxProfile } from '../tax/engine';
+
+export interface Data {
+  accounts: Account[];
+  transactions: Transaction[];
+  categories: Category[];
+  budgets: Budget[];
+  rules: Rule[];
+  goals: Goal[];
+  snapshots: NetWorthSnapshot[];
+  taxProfile: TaxProfile;
+  csvMapping: CsvMapping | null;
+  settings: Settings;
+}
+
+interface Actions {
+  addAccount: (a: Omit<Account, 'id'>) => string;
+  updateAccount: (id: string, patch: Partial<Account>) => void;
+  deleteAccount: (id: string) => void;
+
+  addTransaction: (t: Omit<Transaction, 'id'>) => void;
+  updateTransaction: (id: string, patch: Partial<Transaction>) => void;
+  deleteTransactions: (ids: string[]) => void;
+  setCategoryFor: (ids: string[], categoryId: string | null) => void;
+  importRows: (rows: ImportedRow[], accountId: string) => { added: number; duplicates: number };
+
+  addCategory: (c: Omit<Category, 'id'>) => void;
+  updateCategory: (id: string, patch: Partial<Category>) => void;
+  deleteCategory: (id: string) => void;
+
+  setBudget: (categoryId: string, monthly: number) => void;
+
+  addRule: (pattern: string, categoryId: string, applyToExisting: boolean) => number;
+  deleteRule: (id: string) => void;
+  recategorizeUncategorized: () => number;
+
+  addGoal: (g: Omit<Goal, 'id'>) => void;
+  updateGoal: (id: string, patch: Partial<Goal>) => void;
+  deleteGoal: (id: string) => void;
+
+  recordSnapshot: (month: string, value: number) => void;
+  setTaxProfile: (p: TaxProfile) => void;
+  setCsvMapping: (m: CsvMapping) => void;
+  updateSettings: (s: Partial<Settings>) => void;
+
+  replaceAll: (d: Data) => void;
+  reset: () => void;
+}
+
+export const initialData = (): Data => ({
+  accounts: [],
+  transactions: [],
+  categories: DEFAULT_CATEGORIES,
+  budgets: [],
+  rules: DEFAULT_RULES,
+  goals: [],
+  snapshots: [],
+  taxProfile: emptyProfile(),
+  csvMapping: null,
+  settings: { monthStartDay: 1, theme: 'system', onboarded: false },
+});
+
+export const SCHEMA_VERSION = 1;
+
+export const useStore = create<Data & Actions>()(
+  persist(
+    (set, get) => ({
+      ...initialData(),
+
+      addAccount: (a) => {
+        const id = uid();
+        set((s) => ({ accounts: [...s.accounts, { ...a, id }] }));
+        return id;
+      },
+      updateAccount: (id, patch) =>
+        set((s) => ({ accounts: s.accounts.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
+      deleteAccount: (id) =>
+        set((s) => ({
+          accounts: s.accounts.filter((a) => a.id !== id),
+          transactions: s.transactions.filter((t) => t.accountId !== id),
+          goals: s.goals.map((g) => (g.accountId === id ? { ...g, accountId: undefined } : g)),
+        })),
+
+      addTransaction: (t) => set((s) => ({ transactions: [{ ...t, id: uid() }, ...s.transactions] })),
+      updateTransaction: (id, patch) =>
+        set((s) => ({ transactions: s.transactions.map((t) => (t.id === id ? { ...t, ...patch } : t)) })),
+      deleteTransactions: (ids) => {
+        const del = new Set(ids);
+        set((s) => ({ transactions: s.transactions.filter((t) => !del.has(t.id)) }));
+      },
+      setCategoryFor: (ids, categoryId) => {
+        const sel = new Set(ids);
+        set((s) => ({ transactions: s.transactions.map((t) => (sel.has(t.id) ? { ...t, categoryId } : t)) }));
+      },
+      importRows: (rows, accountId) => {
+        const existing = new Set(get().transactions.map((t) => t.importHash).filter(Boolean));
+        const seen = new Map<string, number>();
+        const rules = get().rules;
+        const fresh: Transaction[] = [];
+        let duplicates = 0;
+        for (const row of rows) {
+          const base = importHash(row, accountId, 0);
+          const n = seen.get(base) ?? 0;
+          seen.set(base, n + 1);
+          const hash = importHash(row, accountId, n);
+          if (existing.has(hash)) {
+            duplicates++;
+            continue;
+          }
+          fresh.push({
+            id: uid(),
+            date: row.date,
+            amount: toCents(row.amount),
+            label: row.label,
+            accountId,
+            categoryId: categorize(row.label, rules),
+            importHash: hash,
+          });
+        }
+        set((s) => ({ transactions: [...fresh, ...s.transactions] }));
+        return { added: fresh.length, duplicates };
+      },
+
+      addCategory: (c) => set((s) => ({ categories: [...s.categories, { ...c, id: uid() }] })),
+      updateCategory: (id, patch) =>
+        set((s) => ({ categories: s.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
+      deleteCategory: (id) =>
+        set((s) => ({
+          categories: s.categories.filter((c) => c.id !== id),
+          transactions: s.transactions.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t)),
+          budgets: s.budgets.filter((b) => b.categoryId !== id),
+          rules: s.rules.filter((r) => r.categoryId !== id),
+        })),
+
+      setBudget: (categoryId, monthly) =>
+        set((s) => {
+          const others = s.budgets.filter((b) => b.categoryId !== categoryId);
+          return { budgets: monthly > 0 ? [...others, { categoryId, monthly }] : others };
+        }),
+
+      addRule: (pattern, categoryId, applyToExisting) => {
+        const rule: Rule = { id: uid(), pattern, categoryId };
+        let changed = 0;
+        set((s) => {
+          const rules = [...s.rules, rule];
+          if (!applyToExisting) return { rules };
+          const transactions = s.transactions.map((t) => {
+            if (t.categoryId) return t;
+            const c = categorize(t.label, [rule]);
+            if (!c) return t;
+            changed++;
+            return { ...t, categoryId: c };
+          });
+          return { rules, transactions };
+        });
+        return changed;
+      },
+      deleteRule: (id) => set((s) => ({ rules: s.rules.filter((r) => r.id !== id) })),
+      recategorizeUncategorized: () => {
+        let changed = 0;
+        set((s) => ({
+          transactions: s.transactions.map((t) => {
+            if (t.categoryId) return t;
+            const c = categorize(t.label, s.rules);
+            if (!c) return t;
+            changed++;
+            return { ...t, categoryId: c };
+          }),
+        }));
+        return changed;
+      },
+
+      addGoal: (g) => set((s) => ({ goals: [...s.goals, { ...g, id: uid() }] })),
+      updateGoal: (id, patch) => set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)) })),
+      deleteGoal: (id) => set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
+
+      recordSnapshot: (month, value) =>
+        set((s) => {
+          const prev = s.snapshots.find((x) => x.month === month);
+          if (prev?.value === value) return {};
+          return {
+            snapshots: [...s.snapshots.filter((x) => x.month !== month), { month, value }].sort((a, b) =>
+              a.month.localeCompare(b.month),
+            ),
+          };
+        }),
+      setTaxProfile: (taxProfile) => set({ taxProfile }),
+      setCsvMapping: (csvMapping) => set({ csvMapping }),
+      updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+      replaceAll: (d) => set({ ...initialData(), ...d }),
+      reset: () => set(initialData()),
+    }),
+    {
+      name: 'cap-budget',
+      version: SCHEMA_VERSION,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => {
+        const { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } = s;
+        return { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings };
+      },
+      // Fusion profonde du profil fiscal : les nouveaux champs reçoivent une valeur par défaut.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<Data>;
+        const base = emptyProfile();
+        const tp = p.taxProfile;
+        return {
+          ...current,
+          ...p,
+          taxProfile: tp
+            ? {
+                ...base,
+                ...tp,
+                declarants: [
+                  { ...base.declarants[0], ...tp.declarants?.[0] },
+                  { ...base.declarants[1], ...tp.declarants?.[1] },
+                ],
+                rental: { ...base.rental, ...tp.rental },
+                furnished: { ...base.furnished, ...tp.furnished },
+                capital: { ...base.capital, ...tp.capital },
+              }
+            : base,
+          settings: { ...current.settings, ...p.settings },
+        };
+      },
+    },
+  ),
+);
+
+/** Export JSON complet, pour sauvegarde ou changement d'appareil. */
+export function exportData(): string {
+  const s = useStore.getState();
+  const { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } = s;
+  return JSON.stringify(
+    { app: 'cap-budget', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } },
+    null,
+    2,
+  );
+}
+
+export function parseBackup(text: string): Data {
+  const json = JSON.parse(text);
+  if (json?.app !== 'cap-budget' || typeof json.data !== 'object') throw new Error('Ce fichier n’est pas une sauvegarde Cap Budget.');
+  const d = json.data as Partial<Data>;
+  if (!Array.isArray(d.transactions) || !Array.isArray(d.accounts)) throw new Error('Sauvegarde incomplète.');
+  return { ...initialData(), ...d } as Data;
+}
