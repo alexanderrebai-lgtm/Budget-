@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { categorize } from '../lib/analysis';
 import { importHash, type ImportedRow } from '../lib/csv';
-import { DEFAULT_CATEGORIES, DEFAULT_RULES, SMOKING_RULES } from '../lib/defaults';
+import { DEFAULT_CATEGORIES, DEFAULT_RULES, SMOKING_RULES, V3_RULES } from '../lib/defaults';
 import { toCents, uid } from '../lib/format';
 import type {
   Account,
@@ -84,7 +84,7 @@ export const initialData = (): Data => ({
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
 });
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const useStore = create<Data & Actions>()(
   persist(
@@ -266,6 +266,14 @@ export function migrateData(d: Partial<Data>, version: number): Partial<Data> {
     if (!cats.some((c) => c.id === smoking.id)) out.categories = [...cats, smoking];
     const rules = out.rules ?? [];
     out.rules = [...rules, ...SMOKING_RULES.filter((r) => !rules.some((x) => x.id === r.id))];
+  }
+  if (version < 3) {
+    // v3 : catégorie « Retraits d'espèces » et règles pour les relevés de néobanques
+    const cats = out.categories ?? [];
+    const cash = DEFAULT_CATEGORIES.find((c) => c.id === 'exp-cash')!;
+    if (!cats.some((c) => c.id === cash.id)) out.categories = [...cats, cash];
+    const rules = out.rules ?? [];
+    out.rules = [...rules, ...V3_RULES.filter((r) => !rules.some((x) => x.id === r.id))];
   }
   return out;
 }

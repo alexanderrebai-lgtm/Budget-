@@ -35,6 +35,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'exp-travel', name: 'Voyages', kind: 'expense', icon: '✈️', color: '#0891b2', group: 'envies' },
   { id: 'exp-gifts', name: 'Cadeaux', kind: 'expense', icon: '🎁', color: '#c026d3', group: 'envies' },
   { id: 'exp-smoking', name: 'Fumer', kind: 'expense', icon: '🚬', color: '#71717a', group: 'envies' },
+  { id: 'exp-cash', name: 'Retraits d’espèces', kind: 'expense', icon: '💵', color: '#65a30d', group: 'envies' },
   { id: 'exp-home-services', name: 'Services à domicile', kind: 'expense', icon: '🧹', color: '#8b5cf6', group: 'envies', taxTag: 'emploi_domicile' },
   { id: 'exp-donations-help', name: 'Dons (aide aux personnes)', kind: 'expense', icon: '❤️', color: '#be123c', group: 'envies', taxTag: 'don_aide' },
   { id: 'exp-donations', name: 'Dons (autres associations)', kind: 'expense', icon: '🤲', color: '#9f1239', group: 'envies', taxTag: 'don' },
@@ -95,4 +96,19 @@ export const SMOKING_RULES: Rule[] = [
   { id: 'r-smoke-5', pattern: 'e-liquide', categoryId: 'exp-smoking' },
 ];
 
-export const DEFAULT_RULES: Rule[] = [...RULES.map(([pattern, categoryId], i) => ({ id: `r${i}`, pattern, categoryId })), ...SMOKING_RULES];
+/** Règles ajoutées en v3 (relevés de néobanques : retraits, enseignes courantes). */
+export const V3_RULES: Rule[] = [
+  { id: 'r-v3-1', pattern: 'retrait', categoryId: 'exp-cash' },
+  { id: 'r-v3-2', pattern: 'retrait dab', categoryId: 'exp-cash' },
+  { id: 'r-v3-3', pattern: 'mc donald', categoryId: 'exp-restaurant' },
+  { id: 'r-v3-4', pattern: 'burger', categoryId: 'exp-restaurant' },
+  { id: 'r-v3-5', pattern: 'kfc', categoryId: 'exp-restaurant' },
+  { id: 'r-v3-6', pattern: 'opac', categoryId: 'exp-housing' },
+  { id: 'r-v3-7', pattern: 'b&m', categoryId: 'exp-shopping' },
+  { id: 'r-v3-8', pattern: 'action ', categoryId: 'exp-shopping' },
+  { id: 'r-v3-9', pattern: 'primark', categoryId: 'exp-shopping' },
+  { id: 'r-v3-10', pattern: 'virement depuis', categoryId: 'trf-internal' },
+  { id: 'r-v3-11', pattern: 'frais nickel', categoryId: 'exp-bank' },
+];
+
+export const DEFAULT_RULES: Rule[] = [...RULES.map(([pattern, categoryId], i) => ({ id: `r${i}`, pattern, categoryId })), ...SMOKING_RULES, ...V3_RULES];

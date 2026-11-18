@@ -66,7 +66,7 @@ export default function Import() {
           ...base,
           format: 'PDF',
           rows: r.rows,
-          note: r.columnsDetected ? undefined : 'Colonnes Débit / Crédit non repérées : montants comptés comme des dépenses, vérifiez le sens.',
+          note: r.columnsDetected ? undefined : 'Sens des montants non repéré : montants comptés comme des dépenses, vérifiez-les.',
         };
       }
       const text = await readFileText(file);
@@ -123,7 +123,7 @@ export default function Import() {
           kind: 'rows',
           format: one.format,
           note: one.format === 'PDF'
-            ? one.note ?? 'Colonnes Débit / Crédit repérées. Vérifiez quelques lignes avant d’importer.'
+            ? one.note ?? 'Sens des montants repéré (colonnes Débit / Crédit ou montants signés). Vérifiez quelques lignes avant d’importer.'
             : one.note,
         });
         return;

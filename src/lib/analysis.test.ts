@@ -92,3 +92,16 @@ describe('catégorie Fumer', () => {
     expect(migrateData(migrated, 1).categories!.filter((c) => c.id === 'exp-smoking')).toHaveLength(1);
   });
 });
+
+describe('libellés de néobanque (Nickel)', () => {
+  it.each([
+    ['RETRAIT AGENCE 7013275 5290XXXXXXXX1133', 'exp-cash'],
+    ['MC DONALD S BEAUVAIS', 'exp-restaurant'],
+    ['OPAC DE L OISE BEAUVAIS', 'exp-housing'],
+    ['B&M FRANCE ALLONNE', 'exp-shopping'],
+    ['VIREMENT ALEXANDER REBAI Virement depuis BoursoBank FR76', 'trf-internal'],
+    ['CARREFOUR CITY BEAUVAIS', 'exp-groceries'],
+  ])('%s → %s', (label, cat) => {
+    expect(categorize(label, DEFAULT_RULES)).toBe(cat);
+  });
+});
