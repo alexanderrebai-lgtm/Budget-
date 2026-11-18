@@ -16,6 +16,7 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
   - **CSV** (séparateur `;` ou `,`, colonne signée ou débit/crédit, UTF-8 ou Windows-1252, préambule ignoré) ;
   - **OFX / QFX** et **QIF** (exports « Money » / « Quicken ») ;
   - **PDF** : lecture du relevé mensuel (dates, libellés sur plusieurs lignes, sens débit/crédit d'après les colonnes, relevés à cheval sur deux années) avec aperçu corrigeable ;
+  - **plusieurs fichiers à la fois** (sélection multiple ou glisser-déposer), avec suppression des opérations communes à des relevés qui se chevauchent ;
   - dédoublonnage à la réimportation
 - Catégorisation automatique par règles (une centaine de marchands français préconfigurés), création de règle en un clic
 - Budgets mensuels par catégorie, avec proposition d'après la moyenne des 3 derniers mois

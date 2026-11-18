@@ -4,13 +4,21 @@ import { Card, PageHead, toast, useCategoryMap } from '../components/ui';
 import { categorize } from '../lib/analysis';
 import { applyMapping, guessMapping, parseCsv, readFileText, type ImportedRow, type ParsedCsv } from '../lib/csv';
 import { dateLabel, money, toCents } from '../lib/format';
-import { parseOfx, parseQif, readPdf } from '../lib/statements';
+import { mergeStatementRows, parseOfx, parseQif, readPdf } from '../lib/statements';
 import type { CsvMapping } from '../lib/types';
 import { useStore } from '../store/store';
 
 type Source =
   | { kind: 'csv'; parsed: ParsedCsv }
-  | { kind: 'rows'; format: 'OFX' | 'QIF' | 'PDF'; note?: string };
+  | { kind: 'rows'; format: string; note?: string };
+
+interface FileReport {
+  name: string;
+  format: string;
+  count?: number;
+  note?: string;
+  error?: string;
+}
 
 const PREVIEW = 15;
 
@@ -31,6 +39,9 @@ export default function Import() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [reports, setReports] = useState<FileReport[]>([]);
+  const [progress, setProgress] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const reset = () => {
     setSource(null);
@@ -38,56 +49,108 @@ export default function Import() {
     setRows([]);
     setInvert(false);
     setShowAll(false);
+    setReports([]);
   };
 
-  const onFile = async (file: File) => {
-    setError(null);
-    reset();
-    setLoading(true);
+  /** Lit un fichier de relevé (hors CSV à paramétrer) et renvoie ses opérations. */
+  const readOne = async (file: File, csvAuto: boolean): Promise<FileReport & { rows: ImportedRow[]; csv?: ParsedCsv }> => {
+    const ext = file.name.toLowerCase().split('.').pop() ?? '';
+    const base = { name: file.name };
     try {
-      const ext = file.name.toLowerCase().split('.').pop() ?? '';
-      setFileName(file.name);
       if (ext === 'pdf' || file.type === 'application/pdf') {
         const r = await readPdf(file);
         if (!r.rows.length) {
-          throw new Error(
-            'Aucune opération reconnue dans ce PDF. S’il s’agit d’un scan (image), il ne contient pas de texte lisible : exportez plutôt un fichier CSV ou OFX depuis votre banque.',
-          );
+          return { ...base, format: 'PDF', rows: [], error: 'Aucune opération reconnue (PDF scanné ou mise en page inconnue).' };
         }
-        setRows(r.rows);
-        setSource({
-          kind: 'rows',
+        return {
+          ...base,
           format: 'PDF',
-          note: r.columnsDetected
-            ? 'Colonnes Débit / Crédit repérées. Vérifiez quelques lignes avant d’importer.'
-            : 'Colonnes Débit / Crédit non repérées : les montants sont comptés comme des dépenses. Cliquez sur un montant pour inverser son sens.',
-        });
-        return;
+          rows: r.rows,
+          note: r.columnsDetected ? undefined : 'Colonnes Débit / Crédit non repérées : montants comptés comme des dépenses, vérifiez le sens.',
+        };
       }
       const text = await readFileText(file);
       if (ext === 'ofx' || ext === 'qfx' || /<OFX>/i.test(text)) {
         const r = parseOfx(text);
-        if (!r.length) throw new Error('Aucune opération trouvée dans ce fichier OFX.');
-        setRows(r);
-        setSource({ kind: 'rows', format: 'OFX' });
-        return;
+        return { ...base, format: 'OFX', rows: r, error: r.length ? undefined : 'Aucune opération trouvée.' };
       }
       if (ext === 'qif' || /^!Type:/m.test(text)) {
         const r = parseQif(text);
-        if (!r.length) throw new Error('Aucune opération trouvée dans ce fichier QIF.');
-        setRows(r);
-        setSource({ kind: 'rows', format: 'QIF' });
-        return;
+        return { ...base, format: 'QIF', rows: r, error: r.length ? undefined : 'Aucune opération trouvée.' };
       }
       const p = parseCsv(text);
-      if (!p.headers.length || !p.rows.length) throw new Error('Fichier vide ou illisible.');
+      if (!p.headers.length || !p.rows.length) return { ...base, format: 'CSV', rows: [], error: 'Fichier vide ou illisible.' };
+      if (!csvAuto) return { ...base, format: 'CSV', rows: [], csv: p };
       const reuse = savedMapping && p.headers.includes(savedMapping.dateColumn) && p.headers.includes(savedMapping.labelColumn);
-      setSource({ kind: 'csv', parsed: p });
-      setMapping(reuse ? savedMapping : guessMapping(p));
+      const { rows: csvRows, errors } = applyMapping(p, reuse ? savedMapping! : guessMapping(p));
+      return {
+        ...base,
+        format: 'CSV',
+        rows: csvRows,
+        error: csvRows.length ? undefined : 'Colonnes non reconnues : importez ce CSV seul pour choisir les colonnes.',
+        note: errors ? `${errors} ligne(s) ignorée(s)` : undefined,
+      };
+    } catch (e) {
+      return { ...base, format: ext.toUpperCase() || '?', rows: [], error: (e as Error).message };
+    }
+  };
+
+  const onFiles = async (list: FileList | File[]) => {
+    const files = [...list];
+    if (!files.length) return;
+    setError(null);
+    reset();
+    setLoading(true);
+    try {
+      // Un seul CSV : on garde le choix des colonnes.
+      if (files.length === 1) {
+        const one = await readOne(files[0], false);
+        setFileName(one.name);
+        if (one.csv) {
+          const p = one.csv;
+          const reuse = savedMapping && p.headers.includes(savedMapping.dateColumn) && p.headers.includes(savedMapping.labelColumn);
+          setSource({ kind: 'csv', parsed: p });
+          setMapping(reuse ? savedMapping : guessMapping(p));
+          return;
+        }
+        if (one.error) throw new Error(
+          one.format === 'PDF'
+            ? 'Aucune opération reconnue dans ce PDF. S’il s’agit d’un scan (image), il ne contient pas de texte lisible : exportez plutôt un fichier CSV ou OFX depuis votre banque.'
+            : one.error,
+        );
+        setRows(one.rows);
+        setSource({
+          kind: 'rows',
+          format: one.format,
+          note: one.format === 'PDF'
+            ? one.note ?? 'Colonnes Débit / Crédit repérées. Vérifiez quelques lignes avant d’importer.'
+            : one.note,
+        });
+        return;
+      }
+      // Plusieurs fichiers : lecture successive (pdf.js est gourmand en mémoire), puis fusion sans doublons.
+      const results: Awaited<ReturnType<typeof readOne>>[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setProgress(`Lecture de ${files[i].name} (${i + 1}/${files.length})…`);
+        results.push(await readOne(files[i], true));
+      }
+      const ok = results.filter((r) => r.rows.length);
+      setReports(results.map(({ name, format, note, error, rows: r }) => ({ name, format, note, error, count: r.length })));
+      if (!ok.length) throw new Error('Aucune opération reconnue dans ces fichiers.');
+      const merged = mergeStatementRows(ok.map((r) => r.rows));
+      const overlap = ok.reduce((s, r) => s + r.rows.length, 0) - merged.length;
+      setFileName(`${files.length} fichiers`);
+      setRows(merged);
+      setSource({
+        kind: 'rows',
+        format: [...new Set(ok.map((r) => r.format))].join(' + '),
+        note: overlap > 0 ? `${overlap} opération(s) présente(s) dans plusieurs relevés n’ont été gardées qu’une fois.` : undefined,
+      });
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   };
 
@@ -139,6 +202,12 @@ export default function Import() {
     <>
       <PageHead title="Importer un relevé" subtitle="CSV, OFX, QIF ou PDF téléchargé depuis votre banque en ligne." />
       <div className="stack">
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); void onFiles(e.dataTransfer.files); }}
+          style={{ outline: dragging ? '2px dashed var(--accent)' : 'none', borderRadius: 'var(--radius)' }}
+        >
         <Card>
           <div className="stack">
             <div className="form-grid">
@@ -149,15 +218,28 @@ export default function Import() {
                 </select>
               </label>
               <label className="field">
-                <span>Fichier du relevé</span>
+                <span>Fichiers des relevés</span>
                 <input
                   type="file"
+                  multiple
                   accept=".csv,.txt,.ofx,.qfx,.qif,.pdf,text/csv,application/pdf,application/x-ofx"
-                  onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+                  onChange={(e) => { if (e.target.files?.length) void onFiles(e.target.files); e.target.value = ''; }}
                 />
+                <span className="hint">Plusieurs fichiers possibles (ex. 12 relevés PDF), ou glissez-les ici.</span>
               </label>
             </div>
-            {loading && <div className="callout">Lecture du fichier…</div>}
+            {loading && <div className="callout">{progress ?? 'Lecture du fichier…'}</div>}
+            {reports.length > 0 && (
+              <div className="list">
+                {reports.map((r) => (
+                  <div key={r.name} className="list-item small">
+                    <span className={`badge ${r.error ? 'danger' : 'accent'}`}>{r.format}</span>
+                    <span className="grow ellipsis" title={r.name}>{r.name}</span>
+                    {r.error ? <span className="neg">{r.error}</span> : <span className="muted">{r.count} opération(s){r.note ? ` · ${r.note}` : ''}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             {error && <div className="callout danger">{error}</div>}
             {!source && !loading && (
               <div className="callout">
@@ -172,6 +254,7 @@ export default function Import() {
             )}
           </div>
         </Card>
+        </div>
 
         {source?.kind === 'csv' && mapping && (
           <Card title={`Colonnes de « ${fileName} »`}>

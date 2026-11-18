@@ -218,3 +218,30 @@ export async function readPdf(file: File): Promise<PdfParseResult> {
   }
   return parseStatementLines(pages);
 }
+
+/* ---------------- Plusieurs relevés à la fois ---------------- */
+
+/**
+ * Fusionne les opérations de plusieurs relevés. Deux relevés qui se chevauchent
+ * contiennent les mêmes opérations : une opération identique (date, montant,
+ * libellé) n'est gardée qu'autant de fois qu'elle apparaît dans le relevé qui
+ * en contient le plus, ce qui préserve les achats identiques d'un même jour.
+ */
+export function mergeStatementRows(files: ImportedRow[][]): ImportedRow[] {
+  const key = (r: ImportedRow) => r.ref ? `ref:${r.ref}` : `${r.date}|${Math.round(r.amount * 100)}|${r.label.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+  const kept = new Map<string, number>();
+  const out: ImportedRow[] = [];
+  for (const rows of files) {
+    const inFile = new Map<string, number>();
+    for (const r of rows) {
+      const k = key(r);
+      const n = (inFile.get(k) ?? 0) + 1;
+      inFile.set(k, n);
+      if (n > (kept.get(k) ?? 0)) {
+        kept.set(k, n);
+        out.push(r);
+      }
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}

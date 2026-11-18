@@ -1,4 +1,4 @@
-import { groupLines, parseOfx, parseQif, parseStatementLines, type TextItem } from './statements';
+import { groupLines, mergeStatementRows, parseOfx, parseQif, parseStatementLines, type TextItem } from './statements';
 
 describe('OFX', () => {
   it('lit les opérations SGML', () => {
@@ -59,5 +59,21 @@ describe('relevé PDF', () => {
       t('05/01', 40, 655), t('CB MONOPRIX', 100, 655), t('12,00', 400, 655),
     ]);
     expect(parseStatementLines([p]).rows.map((r) => r.date)).toEqual(['2025-12-20', '2026-01-05']);
+  });
+});
+
+describe('plusieurs relevés', () => {
+  const r = (date: string, amount: number, label = 'CB LIDL') => ({ date, amount, label });
+  it('supprime les doublons entre relevés qui se chevauchent', () => {
+    const oct = [r('2026-10-28', 2450, 'SALAIRE'), r('2026-10-31', -20)];
+    const nov = [r('2026-10-31', -20), r('2026-11-03', -45)];
+    expect(mergeStatementRows([oct, nov])).toEqual([r('2026-10-28', 2450, 'SALAIRE'), r('2026-10-31', -20), r('2026-11-03', -45)]);
+  });
+  it('garde deux achats identiques le même jour', () => {
+    const a = [r('2026-11-03', -2.5, 'CB CAFE'), r('2026-11-03', -2.5, 'CB CAFE')];
+    expect(mergeStatementRows([a, [r('2026-11-03', -2.5, 'CB CAFE')]])).toHaveLength(2);
+  });
+  it('trie par date', () => {
+    expect(mergeStatementRows([[r('2026-12-01', -1)], [r('2026-11-01', -1)]]).map((x) => x.date)).toEqual(['2026-11-01', '2026-12-01']);
   });
 });
