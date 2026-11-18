@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { categorize } from '../lib/analysis';
 import { importHash, type ImportedRow } from '../lib/csv';
-import { DEFAULT_CATEGORIES, DEFAULT_RULES } from '../lib/defaults';
+import { DEFAULT_CATEGORIES, DEFAULT_RULES, SMOKING_RULES } from '../lib/defaults';
 import { toCents, uid } from '../lib/format';
 import type {
   Account,
@@ -84,7 +84,7 @@ export const initialData = (): Data => ({
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
 });
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const useStore = create<Data & Actions>()(
   persist(
@@ -222,6 +222,7 @@ export const useStore = create<Data & Actions>()(
     {
       name: 'cap-budget',
       version: SCHEMA_VERSION,
+      migrate: (persisted, version) => migrateData(persisted as Partial<Data>, version) as never,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => {
         const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
@@ -255,6 +256,20 @@ export const useStore = create<Data & Actions>()(
   ),
 );
 
+/** Mises à niveau des données enregistrées par une version précédente de l'application. */
+export function migrateData(d: Partial<Data>, version: number): Partial<Data> {
+  const out = { ...d };
+  if (version < 2) {
+    // v2 : catégorie « Fumer » et ses règles
+    const cats = out.categories ?? [];
+    const smoking = DEFAULT_CATEGORIES.find((c) => c.id === 'exp-smoking')!;
+    if (!cats.some((c) => c.id === smoking.id)) out.categories = [...cats, smoking];
+    const rules = out.rules ?? [];
+    out.rules = [...rules, ...SMOKING_RULES.filter((r) => !rules.some((x) => x.id === r.id))];
+  }
+  return out;
+}
+
 /** Export JSON complet, pour sauvegarde ou changement d'appareil. */
 export function exportData(): string {
   const s = useStore.getState();
@@ -271,5 +286,5 @@ export function parseBackup(text: string): Data {
   if (json?.app !== 'cap-budget' || typeof json.data !== 'object') throw new Error('Ce fichier n’est pas une sauvegarde Cap Budget.');
   const d = json.data as Partial<Data>;
   if (!Array.isArray(d.transactions) || !Array.isArray(d.accounts)) throw new Error('Sauvegarde incomplète.');
-  return { ...initialData(), ...d } as Data;
+  return { ...initialData(), ...migrateData(d, Number(json.version) || 1) } as Data;
 }

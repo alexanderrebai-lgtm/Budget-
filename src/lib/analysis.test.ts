@@ -75,3 +75,20 @@ describe('détection des récurrences', () => {
     expect(merchantKey('CB SPOTIFY 12/05 REF 8899')).toBe('spotify ref');
   });
 });
+
+describe('catégorie Fumer', () => {
+  it('reconnaît les achats de tabac', async () => {
+    expect(categorize('CB TABAC DE LA GARE 14/11', DEFAULT_RULES)).toBe('exp-smoking');
+    expect(categorize('CB LA CIVETTE PARIS', DEFAULT_RULES)).toBe('exp-smoking');
+  });
+  it('est ajoutée aux données existantes par la migration', async () => {
+    const { migrateData } = await import('../store/store');
+    const { DEFAULT_CATEGORIES } = await import('./defaults');
+    const old = { categories: DEFAULT_CATEGORIES.filter((c) => c.id !== 'exp-smoking'), rules: [] };
+    const migrated = migrateData(old, 1);
+    expect(migrated.categories!.find((c) => c.id === 'exp-smoking')).toMatchObject({ name: 'Fumer', icon: '🚬' });
+    expect(migrated.rules!.some((r) => r.pattern === 'tabac')).toBe(true);
+    // idempotent
+    expect(migrateData(migrated, 1).categories!.filter((c) => c.id === 'exp-smoking')).toHaveLength(1);
+  });
+});

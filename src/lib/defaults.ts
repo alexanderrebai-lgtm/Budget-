@@ -34,6 +34,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'exp-leisure', name: 'Loisirs et sport', kind: 'expense', icon: '🎾', color: '#f59e0b', group: 'envies' },
   { id: 'exp-travel', name: 'Voyages', kind: 'expense', icon: '✈️', color: '#0891b2', group: 'envies' },
   { id: 'exp-gifts', name: 'Cadeaux', kind: 'expense', icon: '🎁', color: '#c026d3', group: 'envies' },
+  { id: 'exp-smoking', name: 'Fumer', kind: 'expense', icon: '🚬', color: '#71717a', group: 'envies' },
   { id: 'exp-home-services', name: 'Services à domicile', kind: 'expense', icon: '🧹', color: '#8b5cf6', group: 'envies', taxTag: 'emploi_domicile' },
   { id: 'exp-donations-help', name: 'Dons (aide aux personnes)', kind: 'expense', icon: '❤️', color: '#be123c', group: 'envies', taxTag: 'don_aide' },
   { id: 'exp-donations', name: 'Dons (autres associations)', kind: 'expense', icon: '🤲', color: '#9f1239', group: 'envies', taxTag: 'don' },
@@ -85,4 +86,13 @@ const RULES: [string, string][] = [
   ['vir livret', 'sav-invest'], ['assurance vie', 'sav-invest'], ['pea', 'sav-invest'],
 ];
 
-export const DEFAULT_RULES: Rule[] = RULES.map(([pattern, categoryId], i) => ({ id: `r${i}`, pattern, categoryId }));
+/** Règles ajoutées après la première version : identifiants fixes pour la migration des données existantes. */
+export const SMOKING_RULES: Rule[] = [
+  { id: 'r-smoke-1', pattern: 'tabac', categoryId: 'exp-smoking' },
+  { id: 'r-smoke-2', pattern: 'civette', categoryId: 'exp-smoking' },
+  { id: 'r-smoke-3', pattern: 'cigarette', categoryId: 'exp-smoking' },
+  { id: 'r-smoke-4', pattern: 'vapote', categoryId: 'exp-smoking' },
+  { id: 'r-smoke-5', pattern: 'e-liquide', categoryId: 'exp-smoking' },
+];
+
+export const DEFAULT_RULES: Rule[] = [...RULES.map(([pattern, categoryId], i) => ({ id: `r${i}`, pattern, categoryId })), ...SMOKING_RULES];
