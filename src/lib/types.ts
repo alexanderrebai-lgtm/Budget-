@@ -26,6 +26,23 @@ export interface Account {
   valuation?: Cents;
   valuationDate?: ISODate;
   archived?: boolean;
+  /** Quote-part du foyer (compte joint) : 50 = la moitié compte dans la vue personnelle. */
+  share?: number;
+  /** Frais de gestion annuels (placements), ex. 0.009 pour 0,9 %. */
+  feeRate?: number;
+  /** Crédit : taux annuel et mensualité. */
+  rate?: number;
+  monthlyPayment?: Cents;
+}
+
+/** Dépense annuelle ou irrégulière à provisionner chaque mois. */
+export interface Provision {
+  id: string;
+  name: string;
+  amount: Cents;
+  /** Mois d'échéance (1-12). */
+  month: number;
+  day?: number;
 }
 
 export type CategoryKind = 'income' | 'expense' | 'transfer';
@@ -111,4 +128,6 @@ export interface Settings {
   monthStartDay: number;
   theme: 'system' | 'light' | 'dark';
   onboarded: boolean;
+  /** Compter les comptes joints à leur quote-part dans le tableau de bord et les budgets. */
+  personalView?: boolean;
 }

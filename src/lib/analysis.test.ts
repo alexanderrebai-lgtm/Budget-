@@ -62,6 +62,15 @@ describe('détection des récurrences', () => {
     expect(r[0].frequency).toBe('mensuel');
     expect(r[0].annualCost).toBe(1399 * 12);
   });
+  it('tolère un mois exceptionnel (prime)', () => {
+    const txs: Transaction[] = ['2026-06-28', '2026-07-28', '2026-08-28', '2026-09-28', '2026-10-28'].map((date, i) => ({
+      id: String(i), date, amount: i === 2 ? 338_000 : 248_000, label: 'VIR SALAIRE ACME', accountId: 'a', categoryId: null,
+    }));
+    const r = detectRecurring(txs);
+    expect(r).toHaveLength(1);
+    expect(r[0].averageAmount).toBe(248_000);
+    expect(r[0].isIncome).toBe(true);
+  });
   it('normalise les libellés', () => {
     expect(merchantKey('CB SPOTIFY 12/05 REF 8899')).toBe('spotify ref');
   });

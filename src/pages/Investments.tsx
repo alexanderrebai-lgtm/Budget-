@@ -5,8 +5,9 @@ import { euros, percent, kEuros } from '../lib/format';
 import { borrowingCapacity, compareEnvelopes, rentalYield } from '../lib/simulators';
 import { useStore } from '../store/store';
 import { computeTax } from '../tax/engine';
+import { DebtPlanner, FeesImpact } from './Planners';
 
-type Tab = 'enveloppes' | 'emprunt' | 'locatif';
+type Tab = 'enveloppes' | 'frais' | 'dettes' | 'emprunt' | 'locatif';
 
 export default function Investments() {
   const [tab, setTab] = useState<Tab>('enveloppes');
@@ -21,6 +22,8 @@ export default function Investments() {
             onChange={setTab}
             options={[
               { value: 'enveloppes', label: 'Placements' },
+              { value: 'frais', label: 'Frais' },
+              { value: 'dettes', label: 'Dettes' },
               { value: 'emprunt', label: 'Capacité d’emprunt' },
               { value: 'locatif', label: 'Investissement locatif' },
             ]}
@@ -28,6 +31,8 @@ export default function Investments() {
         }
       />
       {tab === 'enveloppes' && <Envelopes />}
+      {tab === 'frais' && <FeesImpact />}
+      {tab === 'dettes' && <DebtPlanner />}
       {tab === 'emprunt' && <Borrowing />}
       {tab === 'locatif' && <Rental />}
     </>
@@ -49,7 +54,7 @@ function Envelopes() {
 
   const results = compareEnvelopes({
     initial, monthly, years, grossReturn: ret / 100, tmiNow: tmiNow / 100, tmiRetirement: tmiRet / 100,
-    couple: taxProfile.status === 'couple', livretRate: livret / 100, pfuTotal: 0.3, socialRate: 0.172,
+    couple: taxProfile.status === 'couple', livretRate: livret / 100, pfuTotal: 0.314, socialRate: 0.186, lifeInsuranceSocialRate: 0.172,
   });
   const best = [...results].sort((a, b) => b.net - a.net)[0];
   const chart = Array.from({ length: years + 1 }, (_, y) => {
@@ -116,7 +121,7 @@ function Envelopes() {
           </table>
         </div>
         <p className="faint small" style={{ marginTop: 10 }}>
-          Simplifications : rendement constant, frais de gestion moyens déduits (CTO/PEA 0,2 %, assurance-vie 0,6 %, PER 0,7 %), sortie en une fois.
+          Simplifications : rendement constant, frais de gestion moyens déduits (CTO/PEA 0,2 %, assurance-vie 0,6 %, PER 0,7 %), sortie en une fois. Fiscalité 2026 : flat tax de 31,4 % (dont 18,6 % de prélèvements sociaux) ; 17,2 % de prélèvements sociaux en assurance-vie.
           Les performances passées ne préjugent pas des performances futures ; un placement en actions peut perdre de la valeur.
         </p>
       </Card>

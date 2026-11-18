@@ -14,6 +14,8 @@ export interface EnvelopeInput {
   livretRate: number;
   pfuTotal: number; // 12,8 % + prélèvements sociaux
   socialRate: number;
+  /** Prélèvements sociaux de l'assurance-vie (non concernée par la hausse de CSG de 2026). */
+  lifeInsuranceSocialRate: number;
 }
 
 export interface EnvelopeResult {
@@ -78,9 +80,9 @@ export function compareEnvelopes(i: EnvelopeInput): EnvelopeResult[] {
     let tax: number;
     if (i.years >= 8) {
       const allowance = i.couple ? 9_200 : 4_600;
-      tax = Math.max(0, gains - allowance) * 0.075 + gains * i.socialRate;
+      tax = Math.max(0, gains - allowance) * 0.075 + gains * i.lifeInsuranceSocialRate;
     } else {
-      tax = gains * i.pfuTotal;
+      tax = gains * (0.128 + i.lifeInsuranceSocialRate);
     }
     out.push({
       id: 'av', name: 'Assurance-vie', contributions, grossValue: g.value, tax, entrySaving: 0, net: g.value - tax, series: g.series,

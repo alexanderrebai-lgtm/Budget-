@@ -15,6 +15,8 @@ import Wealth from './pages/Wealth';
 import Taxes from './pages/Taxes';
 import Investments from './pages/Investments';
 import Guide from './pages/Guide';
+import Forecast from './pages/Forecast';
+import Freedom from './pages/Freedom';
 import SettingsPage from './pages/Settings';
 import Welcome from './pages/Welcome';
 import { useStore } from './store/store';
@@ -30,6 +32,7 @@ const NAV: { section: string; items: { to: string; label: string; icon: string }
       { to: '/transactions', label: 'Opérations', icon: '≡' },
       { to: '/import', label: 'Importer', icon: '⇪' },
       { to: '/budgets', label: 'Budgets', icon: '◔' },
+      { to: '/previsions', label: 'Prévisions', icon: '⟿' },
       { to: '/recurrents', label: 'Abonnements', icon: '↻' },
     ],
   },
@@ -38,6 +41,7 @@ const NAV: { section: string; items: { to: string; label: string; icon: string }
     items: [
       { to: '/patrimoine', label: 'Comptes et patrimoine', icon: '▤' },
       { to: '/objectifs', label: 'Objectifs', icon: '◎' },
+      { to: '/liberte', label: 'Liberté financière', icon: '☼' },
       { to: '/placements', label: 'Simulateurs', icon: '↗' },
     ],
   },
@@ -129,6 +133,8 @@ export default function App() {
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/import" element={<Import />} />
             <Route path="/budgets" element={<Budgets />} />
+            <Route path="/previsions" element={<Forecast />} />
+            <Route path="/liberte" element={<Freedom />} />
             <Route path="/recurrents" element={<Recurring />} />
             <Route path="/patrimoine" element={<Wealth />} />
             <Route path="/objectifs" element={<Goals />} />

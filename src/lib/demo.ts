@@ -89,10 +89,15 @@ export function demoData(): Data {
     accounts: [
       { id: courant, name: 'Compte courant', type: 'courant', openingBalance: 180_000 },
       { id: livret, name: 'Livret A', type: 'livret', openingBalance: 850_000 },
-      { id: pea, name: 'PEA', type: 'pea', openingBalance: 0, valuation: 1_240_000, valuationDate: `${current}-01` },
-      { id: av, name: 'Assurance-vie', type: 'assurance_vie', openingBalance: 0, valuation: 2_100_000, valuationDate: `${current}-01` },
+      { id: pea, name: 'PEA', type: 'pea', openingBalance: 0, valuation: 1_240_000, valuationDate: `${current}-01`, feeRate: 0.003 },
+      { id: av, name: 'Assurance-vie (banque)', type: 'assurance_vie', openingBalance: 0, valuation: 2_100_000, valuationDate: `${current}-01`, feeRate: 0.021 },
     ],
     transactions: txs.sort((a, b) => b.date.localeCompare(a.date)),
+    provisions: [
+      { id: uid(), name: 'Assurance habitation', amount: 22_000, month: 3 },
+      { id: uid(), name: 'Vacances d’été', amount: 120_000, month: 7 },
+      { id: uid(), name: 'Cadeaux de Noël', amount: 40_000, month: 12 },
+    ],
     budgets: [
       { categoryId: 'exp-groceries', monthly: 42_000 },
       { categoryId: 'exp-restaurant', monthly: 15_000 },

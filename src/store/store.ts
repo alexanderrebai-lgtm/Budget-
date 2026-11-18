@@ -11,6 +11,7 @@ import type {
   CsvMapping,
   Goal,
   NetWorthSnapshot,
+  Provision,
   Rule,
   Settings,
   Transaction,
@@ -25,6 +26,7 @@ export interface Data {
   rules: Rule[];
   goals: Goal[];
   snapshots: NetWorthSnapshot[];
+  provisions: Provision[];
   taxProfile: TaxProfile;
   csvMapping: CsvMapping | null;
   settings: Settings;
@@ -55,6 +57,10 @@ interface Actions {
   updateGoal: (id: string, patch: Partial<Goal>) => void;
   deleteGoal: (id: string) => void;
 
+  addProvision: (p: Omit<Provision, 'id'>) => void;
+  updateProvision: (id: string, patch: Partial<Provision>) => void;
+  deleteProvision: (id: string) => void;
+
   recordSnapshot: (month: string, value: number) => void;
   setTaxProfile: (p: TaxProfile) => void;
   setCsvMapping: (m: CsvMapping) => void;
@@ -72,6 +78,7 @@ export const initialData = (): Data => ({
   rules: DEFAULT_RULES,
   goals: [],
   snapshots: [],
+  provisions: [],
   taxProfile: emptyProfile(),
   csvMapping: null,
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
@@ -191,6 +198,10 @@ export const useStore = create<Data & Actions>()(
       updateGoal: (id, patch) => set((s) => ({ goals: s.goals.map((g) => (g.id === id ? { ...g, ...patch } : g)) })),
       deleteGoal: (id) => set((s) => ({ goals: s.goals.filter((g) => g.id !== id) })),
 
+      addProvision: (p) => set((s) => ({ provisions: [...s.provisions, { ...p, id: uid() }] })),
+      updateProvision: (id, patch) => set((s) => ({ provisions: s.provisions.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
+      deleteProvision: (id) => set((s) => ({ provisions: s.provisions.filter((p) => p.id !== id) })),
+
       recordSnapshot: (month, value) =>
         set((s) => {
           const prev = s.snapshots.find((x) => x.month === month);
@@ -213,8 +224,8 @@ export const useStore = create<Data & Actions>()(
       version: SCHEMA_VERSION,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => {
-        const { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } = s;
-        return { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings };
+        const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
+        return { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings };
       },
       // Fusion profonde du profil fiscal : les nouveaux champs reçoivent une valeur par défaut.
       merge: (persisted, current) => {
@@ -247,9 +258,9 @@ export const useStore = create<Data & Actions>()(
 /** Export JSON complet, pour sauvegarde ou changement d'appareil. */
 export function exportData(): string {
   const s = useStore.getState();
-  const { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } = s;
+  const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
   return JSON.stringify(
-    { app: 'cap-budget', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: { accounts, transactions, categories, budgets, rules, goals, snapshots, taxProfile, csvMapping, settings } },
+    { app: 'cap-budget', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } },
     null,
     2,
   );

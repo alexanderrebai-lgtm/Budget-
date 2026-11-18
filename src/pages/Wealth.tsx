@@ -152,6 +152,11 @@ function AccountForm({ account, onSave, onCancel }: { account?: Account; onSave:
   const [opening, setOpening] = useState((account?.openingBalance ?? 0) / 100);
   const [valuation, setValuation] = useState((account?.valuation ?? 0) / 100);
   const manual = ACCOUNT_TYPES[type].manual;
+  const [share, setShare] = useState(account?.share ?? 100);
+  const [feePct, setFeePct] = useState(account?.feeRate !== undefined ? +(account.feeRate * 100).toFixed(2) : 0);
+  const [ratePct, setRatePct] = useState(account?.rate !== undefined ? +(account.rate * 100).toFixed(2) : 0);
+  const [payment, setPayment] = useState((account?.monthlyPayment ?? 0) / 100);
+  const investment = ['pea', 'assurance_vie', 'per', 'cto'].includes(type);
 
   return (
     <Card title={account ? `Modifier « ${account.name} »` : 'Nouveau compte'}>
@@ -166,6 +171,10 @@ function AccountForm({ account, onSave, onCancel }: { account?: Account; onSave:
             openingBalance: manual ? 0 : toCents(opening),
             valuation: manual ? sign * Math.abs(toCents(valuation)) : undefined,
             valuationDate: manual ? todayISO() : undefined,
+            share: share > 0 && share < 100 ? share : undefined,
+            feeRate: investment && feePct > 0 ? feePct / 100 : undefined,
+            rate: type === 'credit' && ratePct > 0 ? ratePct / 100 : undefined,
+            monthlyPayment: type === 'credit' && payment > 0 ? toCents(payment) : undefined,
           });
         }}
       >
@@ -185,6 +194,18 @@ function AccountForm({ account, onSave, onCancel }: { account?: Account; onSave:
             />
           ) : (
             <NumberField label="Solde de départ" value={opening} onChange={setOpening} min={-1e9} hint="Solde avant la première opération suivie." />
+          )}
+          {type === 'courant' && (
+            <NumberField label="Votre part (compte joint)" suffix="%" value={share} onChange={(n) => setShare(Math.min(100, n))} hint="100 % si le compte est à vous seul" />
+          )}
+          {investment && (
+            <NumberField label="Frais de gestion annuels" suffix="%" value={feePct} onChange={setFeePct} hint="Contrat + supports (ETF, fonds)" />
+          )}
+          {type === 'credit' && (
+            <>
+              <NumberField label="Taux annuel" suffix="%" value={ratePct} onChange={setRatePct} />
+              <NumberField label="Mensualité" value={payment} onChange={setPayment} />
+            </>
           )}
         </div>
         <div className="row">

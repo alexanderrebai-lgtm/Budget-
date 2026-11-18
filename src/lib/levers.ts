@@ -315,3 +315,45 @@ export const TAX_CALENDAR = [
   { when: 'Septembre – décembre', what: 'Solde éventuel prélevé. Taxe foncière (octobre). Moduler le taux de prélèvement si vos revenus changent.' },
   { when: 'Avant le 31 décembre', what: 'Derniers versements PER, dons, travaux et dépenses ouvrant droit à crédit d’impôt pour l’année en cours.' },
 ];
+
+/** Revenus et gains exonérés par la loi : rien à payer, souvent rien à déclarer. */
+export const LEGAL_EXEMPTIONS: { title: string; detail: string }[] = [
+  { title: 'Intérêts des livrets réglementés', detail: 'Livret A, LDDS, LEP, livret jeune : ni impôt ni prélèvements sociaux, rien à déclarer.' },
+  { title: 'Gains du PEA après 5 ans', detail: 'Dividendes et plus-values exonérés d’impôt sur le revenu ; seuls les prélèvements sociaux s’appliquent au retrait.' },
+  { title: 'Vente de vos objets d’occasion', detail: 'Meubles, vêtements, électronique, voiture personnelle : exonérés (hors objets de plus de 5 000 €, bijoux, objets d’art). Les plateformes signalent les comptes au-delà de 30 ventes ou 2 000 € par an, sans que cela rende ces ventes imposables.' },
+  { title: 'Covoiturage', detail: 'Le partage des frais d’un trajet que vous faites pour vous-même n’est pas imposable, tant qu’il n’y a pas de bénéfice.' },
+  { title: 'Louer une chambre chez soi', detail: 'Les loyers d’une partie de votre résidence principale louée à un locataire qui y habite sont exonérés si le loyer reste sous un plafond « raisonnable » fixé chaque année par m².' },
+  { title: 'Plus-value sur la résidence principale', detail: 'Totalement exonérée, quel que soit le montant. Pour les autres biens : exonération d’impôt après 22 ans de détention et de prélèvements sociaux après 30 ans.' },
+  { title: 'Heures supplémentaires', detail: 'Exonérées d’impôt dans la limite de 7 500 € par an.' },
+  { title: 'Primes placées en épargne salariale', detail: 'Intéressement, participation et prime de partage de la valeur placés sur un PEE ou un PERCOL : exonérés d’impôt sur le revenu.' },
+  { title: 'Avantages de l’employeur', detail: 'Part patronale des titres-restaurant, prise en charge de l’abonnement de transport, forfait mobilités durables, dans les limites légales.' },
+  { title: 'Jobs étudiants', detail: 'Les salaires des étudiants de moins de 26 ans sont exonérés jusqu’à 3 SMIC mensuels par an.' },
+  { title: 'Prestations sociales', detail: 'Allocations familiales, aides au logement, prime d’activité, RSA : non imposables.' },
+  { title: 'Gains de jeux', detail: 'Les gains de loterie, de paris et de jeux d’argent d’un joueur occasionnel ne sont pas imposables.' },
+  { title: 'Petites installations solaires', detail: 'Revente d’électricité d’une installation domestique jusqu’à 3 kWc : exonérée sous conditions.' },
+  { title: 'Cadeaux et présents d’usage', detail: 'Cadeaux d’anniversaire, de mariage, de Noël proportionnés à vos revenus : ni déclaration ni droits. Au-delà, utiliser les abattements de donation.' },
+  { title: 'Transmission par assurance-vie', detail: '152 500 € par bénéficiaire sans droits pour les versements avant 70 ans ; le conjoint ou partenaire de Pacs est totalement exonéré.' },
+];
+
+/** Où s'arrête l'optimisation : repères juridiques, sans mode d'emploi pour frauder. */
+export const LEGAL_LIMITS = {
+  levels: [
+    { tone: 'accent', title: 'Optimisation : légale', detail: 'Utiliser les dispositifs voulus par le législateur (PER, PEA, dons, frais réels, régime réel, donation…). Personne ne vous reprochera de choisir l’option la moins imposée.' },
+    { tone: 'warn', title: 'Abus de droit : sanctionné', detail: 'Un montage juridiquement valable mais dont le but principal est fiscal (société écran, donation fictive, démembrement artificiel) peut être écarté par l’administration : impôt dû + majoration de 40 % ou 80 %.' },
+    { tone: 'danger', title: 'Fraude : un délit', detail: 'Dissimuler des revenus ou des avoirs (travail non déclaré, locations ou ventes professionnelles non déclarées, comptes ou crypto-actifs à l’étranger non déclarés, fausse domiciliation à l’étranger, fausses factures).' },
+  ],
+  detected: [
+    'Plateformes (location courte durée, ventes en ligne, services) : transmission automatique des revenus de leurs utilisateurs au fisc (directive DAC7).',
+    'Comptes à l’étranger : échange automatique d’informations entre plus de 100 pays (norme CRS). Les comptes de crypto-actifs suivent depuis 2026 (DAC8).',
+    'Fichiers des comptes bancaires (FICOBA), contrats d’assurance-vie (FICOVIE), signalements TRACFIN des mouvements d’espèces importants.',
+    'Exploration des données publiques (annonces, réseaux sociaux) par les algorithmes de ciblage des contrôles.',
+  ],
+  sanctions: [
+    'Intérêts de retard : 0,2 % par mois.',
+    'Majoration de 40 % pour manquement délibéré, 80 % pour manœuvres frauduleuses ou activité occulte.',
+    'Compte à l’étranger non déclaré : 1 500 € d’amende par compte et par an (10 000 € dans un pays non coopératif) ; 750 € pour un compte de crypto-actifs.',
+    'Délai de reprise porté à 10 ans pour une activité occulte ou des avoirs étrangers non déclarés.',
+    'Pénal : jusqu’à 5 ans d’emprisonnement et 500 000 € d’amende, davantage en cas de circonstances aggravantes.',
+  ],
+  fix: 'Une erreur ou un oubli ? Une déclaration rectificative spontanée en ligne limite la sanction aux intérêts de retard (souvent réduits de 30 à 50 %). Le « droit à l’erreur » protège la bonne foi.',
+};

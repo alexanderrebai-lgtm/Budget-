@@ -19,11 +19,15 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - Catégorisation automatique par règles (une centaine de marchands français préconfigurés), création de règle en un clic
 - Budgets mensuels par catégorie, avec proposition d'après la moyenne des 3 derniers mois
 - Détection automatique des abonnements et prélèvements récurrents (coût annuel, prochaine échéance)
-- Tableau de bord : revenus/dépenses sur 6 mois, répartition, règle 50/30/20, alertes
+- Tableau de bord : revenus/dépenses sur 6 mois, répartition, règle 50/30/20, alertes ; vue « foyer » ou « ma part » (comptes joints comptés à leur quote-part)
+- Prévision de trésorerie à 30/90/180 jours (prélèvements et revenus détectés, dépenses courantes lissées), alerte de découvert, calendrier des échéances
+- Provisions pour les dépenses annuelles (assurance, vacances, Noël…)
 
 **Patrimoine**
 - Comptes, livrets, PEA, assurance-vie, PER, immobilier, crédits ; historique mensuel du patrimoine net
 - Objectifs d'épargne (effort mensuel calculé selon l'échéance)
+- Liberté financière : capital cible (taux de retrait), date d'indépendance d'après vos données, leviers d'accélération, couverture des dépenses par les revenus passifs, comparatif de 11 sources de revenus passifs
+- Remboursement des dettes (avalanche ou boule de neige) et impact des frais de gestion de vos placements
 - Simulateurs : comparaison des enveloppes après impôts (livret, CTO, PEA, assurance-vie, PER), capacité d'emprunt (norme HCSF 35 %), rendement et cash-flow d'un investissement locatif
 
 **Fiscalité** (impôt 2026 sur les revenus 2025)
@@ -34,7 +38,7 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - Choix automatique des régimes les plus avantageux, taux marginal réel (effets de la décote inclus), solde après prélèvement à la source
 - Leviers d'optimisation chiffrés en relançant le calcul complet, calculateur de frais réels (barème kilométrique)
 - Pré-remplissage depuis les opérations grâce aux étiquettes fiscales des catégories
-- Guide de 27 leviers (impôt, placements, revenus, dépenses, transmission) et calendrier fiscal
+- Guide de 27 leviers (impôt, placements, revenus, dépenses, transmission), revenus exonérés par la loi, repères sur la limite entre optimisation, abus de droit et fraude, calendrier fiscal
 
 **Synchronisation et installation**
 - Compte e-mail / mot de passe, synchronisation automatique (après chaque modification, au retour sur l'application, toutes les minutes)

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, PageHead, Segmented } from '../components/ui';
-import { CATEGORY_LABELS, LEVERS, TAX_CALENDAR, type LeverCategory } from '../lib/levers';
+import { CATEGORY_LABELS, LEGAL_EXEMPTIONS, LEGAL_LIMITS, LEVERS, TAX_CALENDAR, type LeverCategory } from '../lib/levers';
 
 const DIFFICULTY = ['', 'Simple', 'Intermédiaire', 'Avancé'];
 
 export default function Guide() {
-  const [cat, setCat] = useState<LeverCategory | 'all'>('all');
+  const [cat, setCat] = useState<LeverCategory | 'all' | 'exonere' | 'limite'>('all');
   const list = LEVERS.filter((l) => cat === 'all' || l.category === cat);
+  const special = cat === 'exonere' || cat === 'limite';
 
   return (
     <>
@@ -17,10 +18,15 @@ export default function Guide() {
       />
       <div className="stack">
         <div style={{ overflowX: 'auto' }}>
-          <Segmented<LeverCategory | 'all'>
+          <Segmented<LeverCategory | 'all' | 'exonere' | 'limite'>
             value={cat}
             onChange={setCat}
-            options={[{ value: 'all', label: 'Tous' }, ...Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value: value as LeverCategory, label }))]}
+            options={[
+              { value: 'all', label: 'Tous' },
+              ...Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value: value as LeverCategory, label })),
+              { value: 'exonere', label: 'Exonéré par la loi' },
+              { value: 'limite', label: 'Où est la limite ?' },
+            ]}
           />
         </div>
 
@@ -30,7 +36,49 @@ export default function Guide() {
           et les dispositifs avancés. Le <Link to="/impots">simulateur</Link> chiffre les leviers qui vous concernent.
         </div>
 
-        <div>
+        {cat === 'exonere' && (
+          <Card title="Revenus exonérés par la loi">
+            <p className="muted small" style={{ marginBottom: 10 }}>
+              Ces revenus échappent légalement à l’impôt : ce sont les vraies « niches discrètes », sans risque de redressement.
+            </p>
+            <div className="list">
+              {LEGAL_EXEMPTIONS.map((e) => (
+                <div key={e.title} className="list-item" style={{ alignItems: 'flex-start' }}>
+                  <span className="badge accent">✓</span>
+                  <div className="grow"><strong style={{ fontWeight: 600 }}>{e.title}</strong><div className="muted small">{e.detail}</div></div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {cat === 'limite' && (
+          <div className="stack">
+            <div className="grid g3">
+              {LEGAL_LIMITS.levels.map((l) => (
+                <div key={l.title} className={`callout ${l.tone}`}>
+                  <strong>{l.title}</strong>
+                  <p className="small" style={{ marginTop: 6 }}>{l.detail}</p>
+                </div>
+              ))}
+            </div>
+            <div className="grid g2">
+              <Card title="Ce que l’administration voit automatiquement">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>{LEGAL_LIMITS.detected.map((d) => <li key={d} style={{ marginBottom: 6 }}>{d}</li>)}</ul>
+              </Card>
+              <Card title="Sanctions encourues">
+                <ul style={{ margin: 0, paddingLeft: 18 }}>{LEGAL_LIMITS.sanctions.map((d) => <li key={d} style={{ marginBottom: 6 }}>{d}</li>)}</ul>
+              </Card>
+            </div>
+            <div className="callout accent">{LEGAL_LIMITS.fix}</div>
+            <p className="faint small">
+              Cap Budget ne fournit pas de méthode pour dissimuler des revenus : en plus d’être un délit, la fraude coûte presque toujours plus cher que l’impôt
+              évité une fois les majorations appliquées. Les leviers légaux de ce guide suffisent à réduire fortement l’impôt.
+            </p>
+          </div>
+        )}
+
+        <div style={{ display: special ? 'none' : undefined }}>
           {list.map((l) => (
             <details key={l.id} className="lever">
               <summary>

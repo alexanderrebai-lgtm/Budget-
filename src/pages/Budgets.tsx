@@ -3,9 +3,10 @@ import { Card, NumberField, PageHead, Progress, Stat, toast, useCategoryMap } fr
 import { spendingByCategory } from '../lib/analysis';
 import { addMonths, money0, monthKey, monthLabel, toCents, todayISO } from '../lib/format';
 import { useStore } from '../store/store';
+import { useViewTransactions } from '../lib/useView';
 
 export default function Budgets() {
-  const txs = useStore((s) => s.transactions);
+  const txs = useViewTransactions();
   const budgets = useStore((s) => s.budgets);
   const categories = useStore((s) => s.categories);
   const setBudget = useStore((s) => s.setBudget);

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Card, ChartTooltip, PageHead, Progress, Stat, useCategoryMap } from '../components/ui';
+import { Card, ChartTooltip, PageHead, Progress, Segmented, Stat, useCategoryMap } from '../components/ui';
 import {
   accountBalance,
   detectRecurring,
@@ -11,15 +11,19 @@ import {
 } from '../lib/analysis';
 import { addMonths, dateLabel, euros, money, money0, monthKey, monthLabel, percent, shortMonth, todayISO, kEuros } from '../lib/format';
 import { useStore } from '../store/store';
+import { useViewTransactions } from '../lib/useView';
 import { computeTax } from '../tax/engine';
 import { suggest } from '../tax/optimizer';
 
 export default function Dashboard() {
-  const txs = useStore((s) => s.transactions);
+  const txs = useViewTransactions();
   const accounts = useStore((s) => s.accounts);
   const budgets = useStore((s) => s.budgets);
   const taxProfile = useStore((s) => s.taxProfile);
   const cats = useCategoryMap();
+  const personalView = useStore((s) => s.settings.personalView ?? false);
+  const updateSettings = useStore((s) => s.updateSettings);
+  const hasJoint = accounts.some((a) => a.share !== undefined && a.share < 100);
   const today = todayISO();
   const [month, setMonth] = useState(monthKey(today));
 
@@ -80,6 +84,13 @@ export default function Dashboard() {
         subtitle={monthLabel(month)}
         actions={
           <>
+            {hasJoint && (
+              <Segmented
+                value={personalView ? 'perso' : 'foyer'}
+                onChange={(v) => updateSettings({ personalView: v === 'perso' })}
+                options={[{ value: 'foyer', label: 'Foyer' }, { value: 'perso', label: 'Ma part' }]}
+              />
+            )}
             <button className="ghost" onClick={() => setMonth(addMonths(month, -1))} aria-label="Mois précédent">‹</button>
             <button onClick={() => setMonth(monthKey(today))}>Ce mois-ci</button>
             <button className="ghost" onClick={() => setMonth(addMonths(month, 1))} aria-label="Mois suivant">›</button>

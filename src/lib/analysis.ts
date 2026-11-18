@@ -123,8 +123,12 @@ export function detectRecurring(txs: Transaction[]): Recurring[] {
     if (list.length < 3) continue;
     list.sort((a, b) => a.date.localeCompare(b.date));
     const amounts = list.map((t) => Math.abs(t.amount));
-    const avg = amounts.reduce((s, a) => s + a, 0) / amounts.length;
-    if (amounts.some((a) => Math.abs(a - avg) > avg * 0.15)) continue;
+    // Montant typique = médiane ; on tolère quelques valeurs exceptionnelles (prime, régularisation).
+    const sortedAmounts = [...amounts].sort((a, b) => a - b);
+    const typical = sortedAmounts[Math.floor(sortedAmounts.length / 2)];
+    const stable = amounts.filter((a) => Math.abs(a - typical) <= typical * 0.15);
+    if (stable.length < Math.max(3, Math.ceil(amounts.length * 0.7))) continue;
+    const avg = stable.reduce((s, a) => s + a, 0) / stable.length;
     const gaps = list.slice(1).map((t, i) => daysBetween(list[i].date, t.date));
     const sorted = [...gaps].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
