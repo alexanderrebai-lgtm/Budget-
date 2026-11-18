@@ -64,6 +64,14 @@ export default function Welcome() {
             <button className="primary" onClick={start}>Créer mon espace</button>
             <span className="faint small">ou</span>
             <button onClick={() => replaceAll(demoData())}>Explorer avec des données de démo</button>
+            <button
+              onClick={() => {
+                updateSettings({ onboarded: true });
+                location.hash = '#/reglages';
+              }}
+            >
+              J’ai déjà un compte
+            </button>
             <label className="btn" style={{ cursor: 'pointer' }}>
               Restaurer une sauvegarde
               <input type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])} />

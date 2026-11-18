@@ -261,3 +261,12 @@ details.lever ul { margin: 0; padding-left: 18px; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .content { min-width: 0; }
+/* Application installée sur téléphone : respecter l'encoche et la barre système */
+@media (max-width: 900px) {
+  .mobile-bar { padding-top: max(10px, env(safe-area-inset-top)); }
+  .main { padding-bottom: max(48px, env(safe-area-inset-bottom)); }
+}
+@media (display-mode: standalone) {
+  body { overscroll-behavior-y: none; }
+}
+@media (max-width: 900px) { .mobile-nav { top: calc(51px + max(0px, env(safe-area-inset-top) - 10px)); } }

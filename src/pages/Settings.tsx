@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import SyncCard from '../components/SyncCard';
+import InstallCard from '../components/InstallCard';
 import { Card, CategorySelect, PageHead, Segmented, download, toast, useCategoryMap } from '../components/ui';
 import { demoData } from '../lib/demo';
 import type { Category, NeedGroup, TaxTag } from '../lib/types';
@@ -52,6 +54,8 @@ export default function SettingsPage() {
     <>
       <PageHead title="Réglages" />
       <div className="stack">
+        <SyncCard />
+        <InstallCard />
         <div className="grid g2">
           <Card title="Apparence">
             <Segmented
@@ -63,7 +67,7 @@ export default function SettingsPage() {
           <Card title="Sauvegarde et données">
             <div className="stack" style={{ gap: 10 }}>
               <p className="muted small">
-                Vos {txCount} opérations sont stockées uniquement dans ce navigateur. Exportez régulièrement une sauvegarde pour ne rien perdre
+                Vos {txCount} opérations sont stockées sur cet appareil. Sans synchronisation, exportez régulièrement une sauvegarde pour ne rien perdre
                 (changement d’appareil, nettoyage du navigateur).
               </p>
               <div className="row">

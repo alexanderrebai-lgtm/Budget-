@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from './components/ui';
+import { SyncBadge } from './components/SyncCard';
+import { InstallButton } from './components/InstallCard';
 import { accountBalance } from './lib/analysis';
 import { todayISO } from './lib/format';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +18,9 @@ import Guide from './pages/Guide';
 import SettingsPage from './pages/Settings';
 import Welcome from './pages/Welcome';
 import { useStore } from './store/store';
+import { useSync } from './sync/engine';
+
+const useSyncEmail = () => useSync((s) => s.email);
 
 const NAV: { section: string; items: { to: string; label: string; icon: string }[] }[] = [
   {
@@ -69,6 +74,7 @@ export default function App() {
   useTheme();
   useNetWorthSnapshot();
   const onboarded = useStore((s) => s.settings.onboarded);
+  const syncEmail = useSyncEmail();
   const all = NAV.flatMap((s) => s.items);
 
   if (!onboarded) return <Welcome />;
@@ -96,7 +102,11 @@ export default function App() {
             <span className="ico" aria-hidden>⚙</span>Réglages
           </NavLink>
         </nav>
-        <div className="sidebar-foot">Vos données restent dans ce navigateur. Pensez à exporter une sauvegarde.</div>
+        <div className="sidebar-foot">
+          <SyncBadge />
+          <div style={{ marginTop: 8 }}><InstallButton /></div>
+          <div style={{ marginTop: 8 }}>Données stockées sur cet appareil{syncEmail ? ' et synchronisées' : ''}.</div>
+        </div>
       </aside>
 
       <div className="content">
@@ -104,6 +114,7 @@ export default function App() {
           <div className="brand">
             <span className="brand-mark">€</span> Cap Budget
           </div>
+          <span style={{ marginLeft: 'auto' }}><SyncBadge /></span>
         </div>
         <nav className="mobile-nav" aria-label="Navigation">
           {[...all, { to: '/reglages', label: 'Réglages', icon: '⚙' }].map((i) => (
