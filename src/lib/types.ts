@@ -33,6 +33,8 @@ export interface Account {
   /** Crédit : taux annuel et mensualité. */
   rate?: number;
   monthlyPayment?: Cents;
+  /** Lien avec un compte bancaire connecté (agrégateur). */
+  bank?: { connectionId: string; accountUid: string; bankName: string; lastSync?: string };
 }
 
 /** Dépense annuelle ou irrégulière à provisionner chaque mois. */

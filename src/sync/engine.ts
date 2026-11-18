@@ -78,7 +78,7 @@ const patch = (p: Partial<SyncState>) => useSync.setState(p);
 let client: SupabaseClient | null = null;
 let clientFor = '';
 
-function getClient(): SupabaseClient | null {
+export function getClient(): SupabaseClient | null {
   const { url, key } = useSync.getState().config;
   if (!url || !key) return null;
   const id = `${url}|${key}`;

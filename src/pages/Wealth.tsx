@@ -79,6 +79,7 @@ export default function Wealth() {
                     <div>{a.name}</div>
                     <div className="faint small">
                       {ACCOUNT_TYPES[a.type].label}
+                      {a.bank ? ` · 🏦 relié à ${a.bank.bankName}` : ''}
                       {a.valuation !== undefined && a.valuationDate ? ` · valorisé au ${new Date(a.valuationDate).toLocaleDateString('fr-FR')}` : ''}
                     </div>
                   </div>

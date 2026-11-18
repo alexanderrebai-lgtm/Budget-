@@ -79,6 +79,8 @@ export interface ImportedRow {
   label: string;
   /** Euros, signé. */
   amount: number;
+  /** Référence unique fournie par la banque (connexion bancaire), prioritaire pour le dédoublonnage. */
+  ref?: string | null;
 }
 
 export function applyMapping(parsed: ParsedCsv, mapping: CsvMapping): { rows: ImportedRow[]; errors: number } {
@@ -106,5 +108,6 @@ export function applyMapping(parsed: ParsedCsv, mapping: CsvMapping): { rows: Im
 
 /** Empreinte stable d'une opération ; un compteur distingue les opérations identiques le même jour. */
 export function importHash(row: ImportedRow, accountId: string, occurrence: number) {
+  if (row.ref) return `${accountId}|ref|${row.ref}`;
   return `${accountId}|${row.date}|${Math.round(row.amount * 100)}|${normalize(row.label)}|${occurrence}`;
 }

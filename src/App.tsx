@@ -16,6 +16,8 @@ import Taxes from './pages/Taxes';
 import Investments from './pages/Investments';
 import Guide from './pages/Guide';
 import Forecast from './pages/Forecast';
+import Banks from './pages/Banks';
+import { autoBankSync } from './bank/bank';
 import Freedom from './pages/Freedom';
 import SettingsPage from './pages/Settings';
 import Welcome from './pages/Welcome';
@@ -30,6 +32,7 @@ const NAV: { section: string; items: { to: string; label: string; icon: string }
     items: [
       { to: '/', label: 'Tableau de bord', icon: '◧' },
       { to: '/transactions', label: 'Opérations', icon: '≡' },
+      { to: '/banques', label: 'Banques connectées', icon: '⌂' },
       { to: '/import', label: 'Importer', icon: '⇪' },
       { to: '/budgets', label: 'Budgets', icon: '◔' },
       { to: '/previsions', label: 'Prévisions', icon: '⟿' },
@@ -79,6 +82,12 @@ export default function App() {
   useNetWorthSnapshot();
   const onboarded = useStore((s) => s.settings.onboarded);
   const syncEmail = useSyncEmail();
+  // mise à jour automatique des comptes bancaires reliés (au plus toutes les 6 h)
+  useEffect(() => {
+    if (!syncEmail) return;
+    const t = setTimeout(() => void autoBankSync(), 4000);
+    return () => clearTimeout(t);
+  }, [syncEmail]);
   const all = NAV.flatMap((s) => s.items);
 
   if (!onboarded) return <Welcome />;
@@ -132,6 +141,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/import" element={<Import />} />
+            <Route path="/banques" element={<Banks />} />
             <Route path="/budgets" element={<Budgets />} />
             <Route path="/previsions" element={<Forecast />} />
             <Route path="/liberte" element={<Freedom />} />

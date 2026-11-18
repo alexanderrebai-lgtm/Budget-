@@ -11,6 +11,7 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 
 **Budget**
 - Comptes multiples, opérations avec recherche, filtres, sélection multiple, export CSV
+- **Connexion directe aux banques** (comme Bankin') via l'agrégateur agréé Enable Banking (DSP2) : choix de la banque, authentification chez la banque, import automatique des opérations (90 jours puis mises à jour toutes les 6 h), solde aligné sur celui de la banque, accès en lecture seule révocable
 - Import de relevés bancaires :
   - **CSV** (séparateur `;` ou `,`, colonne signée ou débit/crédit, UTF-8 ou Windows-1252, préambule ignoré) ;
   - **OFX / QFX** et **QIF** (exports « Money » / « Quicken ») ;
@@ -75,6 +76,21 @@ version périmée ; le client fusionne alors puis réessaie. Un autre projet peu
 Dans le tableau de bord Supabase, *Authentication → URL Configuration* : renseigner l'adresse de la version web comme
 *Site URL* pour que les liens de confirmation et de réinitialisation du mot de passe y mènent.
 
+## Connexion bancaire (Enable Banking)
+
+La fonction Supabase `bank` (`supabase/functions/bank`) détient la clé privée de l'agrégateur, signe les requêtes
+(JWT RS256) et relaie les opérations sans les stocker. Tables : `bank_auths` (autorisations en cours, accès serveur
+uniquement) et `bank_connections` (sessions, lisibles par leur seul propriétaire).
+
+Mise en service, une fois :
+1. Créer un compte sur enablebanking.com, puis une application **Production** dont l'adresse de retour est
+   `https://<projet>.supabase.co/functions/v1/bank/callback`. Générer la clé dans le navigateur et télécharger la clé privée.
+2. « Activer en reliant des comptes » : relier tous les comptes à suivre (mode restreint, gratuit pour un usage personnel).
+3. Dans Supabase → Edge Functions → Secrets : `ENABLE_BANKING_APP_ID` et `ENABLE_BANKING_PRIVATE_KEY` (contenu du fichier PEM).
+
+Les banques limitent l'historique à environ 90 jours et les consultations automatiques à environ 4 par jour ;
+l'accès doit être renouvelé au plus tard tous les 180 jours.
+
 ## Structure
 
 ```
@@ -83,10 +99,11 @@ src/
   lib/        types, formatage, import CSV, analyses, simulateurs, contenu du guide, démo
   store/      état persistant (zustand + localStorage, fusion des schémas)
   sync/       synchronisation : moteur, fusion à trois voies, chiffrement, stockage IndexedDB
+  bank/       client de la connexion bancaire
   pages/      une page par écran
   components/ composants d'interface partagés
 electron/     processus principal du logiciel PC
-supabase/     migrations SQL
+supabase/     migrations SQL et fonction serveur « bank »
 ```
 
 Pour une nouvelle année fiscale, ajouter un objet `TaxYearParams` dans `src/tax/params.ts` et mettre à jour `CURRENT_PARAMS`.
