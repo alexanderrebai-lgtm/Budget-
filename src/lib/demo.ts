@@ -1,4 +1,4 @@
-import { categorize } from './analysis';
+import { classify } from './merchants';
 import { DEFAULT_RULES } from './defaults';
 import { addMonths, uid } from './format';
 import type { Data } from '../store/store';
@@ -30,7 +30,7 @@ export function demoData(): Data {
   const av = uid();
   const txs: Transaction[] = [];
   const push = (date: string, amount: number, label: string, accountId = courant) => {
-    txs.push({ id: uid(), date, amount: Math.round(amount * 100), label, accountId, categoryId: categorize(label, DEFAULT_RULES) });
+    txs.push({ id: uid(), date, amount: Math.round(amount * 100), label, accountId, categoryId: classify(label, amount, { defaultRules: DEFAULT_RULES }).categoryId });
   };
 
   for (let i = 7; i >= 0; i--) {

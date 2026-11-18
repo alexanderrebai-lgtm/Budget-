@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { categorize } from '../lib/analysis';
+import { classify, isDefaultRule, learnMerchants } from '../lib/merchants';
 import { findTransferPairs, looksLikeTransfer, ownerVariants, TRANSFER_CATEGORY } from '../lib/transfers';
 import { importHash, type ImportedRow } from '../lib/csv';
 import { DEFAULT_CATEGORIES, DEFAULT_RULES, SMOKING_RULES, V3_RULES } from '../lib/defaults';
@@ -123,7 +124,7 @@ export const useStore = create<Data & Actions>()(
       importRows: (rows, accountId) => {
         const existing = new Set(get().transactions.map((t) => t.importHash).filter(Boolean));
         const seen = new Map<string, number>();
-        const rules = get().rules;
+        const ctx = classifierContext(get());
         const fresh: Transaction[] = [];
         let duplicates = 0;
         for (const row of rows) {
@@ -141,7 +142,7 @@ export const useStore = create<Data & Actions>()(
             amount: toCents(row.amount),
             label: row.label,
             accountId,
-            categoryId: categorize(row.label, rules),
+            categoryId: classify(row.label, row.amount, ctx).categoryId,
             importHash: hash,
           });
         }
@@ -211,10 +212,11 @@ export const useStore = create<Data & Actions>()(
       deleteRule: (id) => set((s) => ({ rules: s.rules.filter((r) => r.id !== id) })),
       recategorizeUncategorized: () => {
         let changed = 0;
+        const ctx = classifierContext(get());
         set((s) => ({
           transactions: s.transactions.map((t) => {
             if (t.categoryId) return t;
-            const c = categorize(t.label, s.rules);
+            const c = classify(t.label, t.amount, ctx).categoryId;
             if (!c) return t;
             changed++;
             return { ...t, categoryId: c };
@@ -284,6 +286,15 @@ export const useStore = create<Data & Actions>()(
     },
   ),
 );
+
+/** Contexte du moteur de catégorisation : règles de l'utilisateur, règles fournies, marchands déjà classés. */
+export function classifierContext(d: Pick<Data, 'rules' | 'transactions'>) {
+  return {
+    userRules: d.rules.filter((r) => !isDefaultRule(r)),
+    defaultRules: d.rules.filter(isDefaultRule),
+    memory: learnMerchants(d.transactions),
+  };
+}
 
 /** Mises à niveau des données enregistrées par une version précédente de l'application. */
 export function migrateData(d: Partial<Data>, version: number): Partial<Data> {

@@ -18,7 +18,8 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
   - **PDF** : lecture du relevé mensuel (dates, libellés sur plusieurs lignes, sens débit/crédit d'après les colonnes, relevés à cheval sur deux années) avec aperçu corrigeable ;
   - **plusieurs fichiers à la fois** (sélection multiple ou glisser-déposer), avec suppression des opérations communes à des relevés qui se chevauchent ;
   - dédoublonnage à la réimportation
-- Catégorisation automatique par règles (une centaine de marchands français préconfigurés), création de règle en un clic
+- **Reconnaissance des enseignes**, 100 % locale : nettoyage du libellé (CB, PRLV, dates, cartes masquées, références), base d'environ 350 enseignes françaises avec leurs variantes d'écriture, mots-clés de type de commerce (boulangerie, pharmacie, pizzeria, garage…), apprentissage à partir de vos propres choix, nom de l'enseigne affiché dans la liste ; ordre de décision : vos règles → vos choix passés → enseigne → règles fournies → type de commerce
+- Création de règle en un clic, rapprochement des virements entre vos comptes
 - Budgets mensuels par catégorie, avec proposition d'après la moyenne des 3 derniers mois
 - Détection automatique des abonnements et prélèvements récurrents (coût annuel, prochaine échéance)
 - Tableau de bord : revenus/dépenses sur 6 mois, répartition, règle 50/30/20, alertes ; vue « foyer » ou « ma part » (comptes joints comptés à leur quote-part)
@@ -96,6 +97,7 @@ l'accès doit être renouvelé au plus tard tous les 180 jours.
 
 ```
 src/
+  lib/merchants.ts  moteur de reconnaissance des enseignes
   tax/        params.ts (paramètres par année), engine.ts (calcul), optimizer.ts (leviers)
   lib/        types, formatage, import CSV, analyses, simulateurs, contenu du guide, démo
   store/      état persistant (zustand + localStorage, fusion des schémas)

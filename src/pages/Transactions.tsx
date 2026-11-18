@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CategorySelect, Empty, NumberField, PageHead, Segmented, download, toast, useCategoryMap } from '../components/ui';
 import { merchantKey } from '../lib/analysis';
+import { classify } from '../lib/merchants';
 import { dateLabel, money, monthKey, monthLabel, normalize, toCents, todayISO } from '../lib/format';
 import { useStore } from '../store/store';
 
@@ -48,6 +49,15 @@ export default function Transactions() {
   }, [txs, q, kind, account, category, month]);
 
   const total = filtered.reduce((s, t) => s + t.amount, 0);
+  // nom d'enseigne reconnu (affiché à la place du libellé brut, qui reste visible en dessous)
+  const merchantNames = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of filtered.slice(0, limit)) {
+      const name = classify(t.label, t.amount).merchant;
+      if (name) m.set(t.id, name);
+    }
+    return m;
+  }, [filtered, limit]);
   const allSelected = filtered.length > 0 && filtered.slice(0, limit).every((t) => selected.has(t.id));
 
   const toggle = (id: string) => {
@@ -202,7 +212,8 @@ export default function Transactions() {
                       <td><input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} aria-label="Sélectionner" /></td>
                       <td className="muted small" style={{ whiteSpace: 'nowrap' }}>{dateLabel(t.date)}</td>
                       <td style={{ maxWidth: 360 }}>
-                        <div className="ellipsis" title={t.label}>{t.label}</div>
+                        <div className="ellipsis" title={t.label}>{merchantNames.get(t.id) ?? t.label}</div>
+                        {merchantNames.has(t.id) && <div className="faint small ellipsis" title={t.label}>{t.label}</div>}
                         <div className="faint small">
                           {accounts.find((a) => a.id === t.accountId)?.name}
                           {t.transferId && (() => {

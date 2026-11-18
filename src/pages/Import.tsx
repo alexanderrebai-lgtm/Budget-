@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, PageHead, toast, useCategoryMap } from '../components/ui';
-import { categorize } from '../lib/analysis';
+import { classify } from '../lib/merchants';
 import { applyMapping, guessMapping, parseCsv, readFileText, type ImportedRow, type ParsedCsv } from '../lib/csv';
 import { dateLabel, money, toCents } from '../lib/format';
 import { mergeStatementRows, parseOfx, parseQif, readPdf } from '../lib/statements';
 import type { CsvMapping } from '../lib/types';
-import { useStore } from '../store/store';
+import { classifierContext, useStore } from '../store/store';
 
 type Source =
   | { kind: 'csv'; parsed: ParsedCsv }
@@ -167,7 +167,10 @@ export default function Import() {
     return out;
   }, [source, mapping, rows, invert]);
 
-  const categorized = result ? result.rows.filter((r) => categorize(r.label, rules)).length : 0;
+  const txsForMemory = useStore((s) => s.transactions);
+  const ctx = useMemo(() => classifierContext({ rules, transactions: txsForMemory }), [rules, txsForMemory]);
+  const guesses = useMemo(() => (result ? result.rows.map((r) => classify(r.label, r.amount, ctx)) : []), [result, ctx]);
+  const categorized = guesses.filter((g) => g.categoryId).length;
   const total = result ? result.rows.reduce((s, r) => s + r.amount, 0) : 0;
   const editable = source?.kind === 'rows';
 
@@ -319,12 +322,18 @@ export default function Import() {
                   </thead>
                   <tbody>
                     {visible.map((r, i) => {
-                      const c = cats.get(categorize(r.label, rules) ?? '');
+                      const g = guesses[i];
+                      const c = cats.get(g?.categoryId ?? '');
                       return (
                         <tr key={i}>
                           <td className="small muted" style={{ whiteSpace: 'nowrap' }}>{dateLabel(r.date)}</td>
                           <td className="ellipsis" style={{ maxWidth: 340 }} title={r.label}>{r.label}</td>
-                          <td className="small">{c ? `${c.icon} ${c.name}` : <span className="faint">À catégoriser</span>}</td>
+                          <td className="small">
+                            {c ? `${c.icon} ${c.name}` : <span className="faint">À catégoriser</span>}
+                            {g?.merchant && <div className="faint">{g.merchant}{g.source === 'appris' ? ' · appris' : ''}</div>}
+                            {!g?.merchant && g?.source === 'appris' && <div className="faint">d’après vos choix</div>}
+                            {!g?.merchant && g?.source === 'mot-cle' && <div className="faint">type de commerce</div>}
+                          </td>
                           <td className={`amount ${r.amount >= 0 ? 'pos' : ''}`}>
                             {editable ? (
                               <button className="ghost small num" title="Inverser le sens" onClick={() => flip(i)} style={{ color: 'inherit' }}>
