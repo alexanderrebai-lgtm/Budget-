@@ -1,6 +1,7 @@
-# Génère les installateurs du logiciel PC (Windows .exe, macOS .dmg, Linux AppImage/.deb).
-# Lancement : pousser un tag « v1.0.0 » (crée une version GitHub téléchargeable)
-# ou bouton « Run workflow » dans l'onglet Actions (fichiers dans les artefacts).
+# Génère les installateurs du logiciel PC (Windows .exe, macOS .dmg, Linux AppImage/.deb)
+# et les publie dans une version GitHub, chaque système dès qu'il est prêt.
+# Lancement : bouton « Run workflow » dans l'onglet Actions (tag v<version de package.json>)
+# ou push d'un tag « v1.2.0 ».
 name: Application PC
 
 on:
@@ -17,13 +18,44 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"; echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+            echo "publish=${{ inputs.publish }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Créer la version
+        if: steps.version.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Cap Budget ${{ steps.version.outputs.tag }}
+          make_latest: true
+          body: |
+            Installateurs du logiciel Cap Budget (ils apparaissent ci-dessous au fur et à mesure de leur fabrication).
+            - **Windows** : `Cap-Budget-…-win-x64.exe`. Si SmartScreen s'affiche : « Informations complémentaires » puis « Exécuter quand même ».
+            - **macOS** : `.dmg`. Au premier lancement : clic droit sur l'application puis « Ouvrir ».
+            - **Linux** : `.AppImage` (rendre exécutable) ou `.deb`.
+
   build:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    timeout-minutes: 40
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,33 +80,13 @@ jobs:
             release/*.deb
           if-no-files-found: error
           retention-days: 30
-
-  release:
-    # publie même si un système a échoué ou a été annulé (ex. file d'attente macOS)
-    if: ${{ !cancelled() && (startsWith(github.ref, 'refs/tags/v') || inputs.publish) }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - id: version
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT";
-          else echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/download-artifact@v4
+      - name: Ajouter à la version
+        if: needs.prepare.outputs.publish == 'true'
+        uses: softprops/action-gh-release@v2
         with:
-          path: artifacts
-          merge-multiple: true
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          name: Cap Budget ${{ steps.version.outputs.tag }}
-          make_latest: true
-          files: artifacts/*
-          fail_on_unmatched_files: true
-          body: |
-            Installateurs du logiciel Cap Budget.
-            - Windows : `Cap-Budget-…-win-x64.exe` (si SmartScreen s'affiche : « Informations complémentaires » puis « Exécuter quand même »)
-            - macOS : `.dmg` (au premier lancement : clic droit sur l'application puis « Ouvrir »)
-            - Linux : `.AppImage` (rendre exécutable) ou `.deb`
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          files: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
