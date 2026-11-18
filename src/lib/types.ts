@@ -85,6 +85,8 @@ export interface Transaction {
   notes?: string;
   /** Empreinte utilisée pour éviter les doublons à l'import. */
   importHash?: string;
+  /** Identifiant commun aux deux opérations d'un virement entre vos comptes. */
+  transferId?: string;
 }
 
 export interface Budget {
@@ -132,4 +134,6 @@ export interface Settings {
   onboarded: boolean;
   /** Compter les comptes joints à leur quote-part dans le tableau de bord et les budgets. */
   personalView?: boolean;
+  /** Nom du titulaire, pour reconnaître les virements entre vos comptes (« REBAI ALEXANDER »). */
+  ownerName?: string;
 }

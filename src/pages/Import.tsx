@@ -174,8 +174,8 @@ export default function Import() {
   const doImport = () => {
     if (!result || !accountId) return;
     if (source?.kind === 'csv' && mapping) setCsvMapping(mapping);
-    const { added, duplicates } = importRows(result.rows, accountId);
-    toast(`${added} opération(s) importée(s)${duplicates ? `, ${duplicates} doublon(s) ignoré(s)` : ''}.`);
+    const { added, duplicates, transfers } = importRows(result.rows, accountId);
+    toast(`${added} opération(s) importée(s)${duplicates ? `, ${duplicates} doublon(s) ignoré(s)` : ''}${transfers ? `, ${transfers} virement(s) entre vos comptes rapproché(s)` : ''}.`);
     navigate('/transactions');
   };
 

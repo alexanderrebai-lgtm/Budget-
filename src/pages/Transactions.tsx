@@ -11,7 +11,12 @@ const PAGE = 150;
 export default function Transactions() {
   const txs = useStore((s) => s.transactions);
   const accounts = useStore((s) => s.accounts);
-  const { addTransaction, updateTransaction, deleteTransactions, setCategoryFor, addRule } = useStore.getState();
+  const { addTransaction, updateTransaction, deleteTransactions, setCategoryFor, addRule, linkTransfers, unlinkTransfer } = useStore.getState();
+  const transferPeer = useMemo(() => {
+    const byId = new Map<string, typeof txs>();
+    for (const t of txs) if (t.transferId) byId.set(t.transferId, [...(byId.get(t.transferId) ?? []), t]);
+    return byId;
+  }, [txs]);
   const cats = useCategoryMap();
 
   const [q, setQ] = useState('');
@@ -80,6 +85,16 @@ export default function Transactions() {
         subtitle={`${filtered.length} opération(s) · solde ${money(total)}`}
         actions={
           <>
+            <button
+              onClick={() => {
+                const n = linkTransfers();
+                toast(n ? `${n} virement(s) entre vos comptes rapproché(s).` : 'Aucun nouveau virement entre vos comptes à rapprocher.');
+              }}
+              disabled={accounts.length < 2}
+              title="Relie le débit d’un compte au crédit du même montant sur un autre de vos comptes"
+            >
+              ⇄ Rapprocher les virements
+            </button>
             <button onClick={exportCsv} disabled={!filtered.length}>Exporter</button>
             <Link to="/import" className="btn">Importer un relevé</Link>
             <button className="primary" onClick={() => setShowAdd((v) => !v)} disabled={!accounts.length}>+ Ajouter</button>
@@ -188,7 +203,19 @@ export default function Transactions() {
                       <td className="muted small" style={{ whiteSpace: 'nowrap' }}>{dateLabel(t.date)}</td>
                       <td style={{ maxWidth: 360 }}>
                         <div className="ellipsis" title={t.label}>{t.label}</div>
-                        <div className="faint small">{accounts.find((a) => a.id === t.accountId)?.name}</div>
+                        <div className="faint small">
+                          {accounts.find((a) => a.id === t.accountId)?.name}
+                          {t.transferId && (() => {
+                            const peer = transferPeer.get(t.transferId)?.find((x) => x.id !== t.id);
+                            const peerName = accounts.find((a) => a.id === peer?.accountId)?.name ?? 'autre compte';
+                            return (
+                              <span className="badge accent" style={{ marginLeft: 6 }} title="Virement entre vos comptes">
+                                ⇄ {t.amount < 0 ? 'vers' : 'depuis'} {peerName}
+                                <button className="ghost small" style={{ padding: '0 2px', marginLeft: 2 }} aria-label="Dissocier" title="Dissocier ce virement" onClick={() => unlinkTransfer(t.transferId!)}>×</button>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td><CategorySelect value={t.categoryId} onChange={(c) => changeCategory(t.id, t.label, c)} /></td>
                       <td className={`amount ${t.amount >= 0 ? 'pos' : ''}`}>{money(t.amount)}</td>

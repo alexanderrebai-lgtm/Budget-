@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { categorize } from '../lib/analysis';
+import { findTransferPairs, looksLikeTransfer, ownerVariants, TRANSFER_CATEGORY } from '../lib/transfers';
 import { importHash, type ImportedRow } from '../lib/csv';
 import { DEFAULT_CATEGORIES, DEFAULT_RULES, SMOKING_RULES, V3_RULES } from '../lib/defaults';
-import { toCents, uid } from '../lib/format';
+import { normalize, toCents, uid } from '../lib/format';
 import type {
   Account,
   Budget,
@@ -41,7 +42,10 @@ interface Actions {
   updateTransaction: (id: string, patch: Partial<Transaction>) => void;
   deleteTransactions: (ids: string[]) => void;
   setCategoryFor: (ids: string[], categoryId: string | null) => void;
-  importRows: (rows: ImportedRow[], accountId: string) => { added: number; duplicates: number };
+  importRows: (rows: ImportedRow[], accountId: string) => { added: number; duplicates: number; transfers: number };
+  /** Rapproche les virements entre vos comptes ; renvoie le nombre de paires trouvées. */
+  linkTransfers: () => number;
+  unlinkTransfer: (transferId: string) => void;
 
   addCategory: (c: Omit<Category, 'id'>) => void;
   updateCategory: (id: string, patch: Partial<Category>) => void;
@@ -84,7 +88,7 @@ export const initialData = (): Data => ({
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
 });
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const useStore = create<Data & Actions>()(
   persist(
@@ -142,8 +146,33 @@ export const useStore = create<Data & Actions>()(
           });
         }
         set((s) => ({ transactions: [...fresh, ...s.transactions] }));
-        return { added: fresh.length, duplicates };
+        const transfers = fresh.length ? get().linkTransfers() : 0;
+        return { added: fresh.length, duplicates, transfers };
       },
+      linkTransfers: () => {
+        const owners = ownerVariants(get().settings.ownerName ?? '');
+        const pairs = findTransferPairs(get().transactions, owners);
+        const link = new Map<string, string>();
+        for (const p of pairs) {
+          const id = uid();
+          link.set(p.debitId, id);
+          link.set(p.creditId, id);
+        }
+        set((s) => ({
+          transactions: s.transactions.map((t) => {
+            const tid = link.get(t.id);
+            if (tid) return { ...t, transferId: tid, categoryId: TRANSFER_CATEGORY };
+            // virement à votre nom vers un compte non suivi dans l'application
+            if (!t.categoryId && owners.length && looksLikeTransfer(t.label, []) && owners.some((n) => ` ${normalize(t.label)} `.includes(` ${n} `))) {
+              return { ...t, categoryId: TRANSFER_CATEGORY };
+            }
+            return t;
+          }),
+        }));
+        return pairs.length;
+      },
+      unlinkTransfer: (transferId) =>
+        set((s) => ({ transactions: s.transactions.map((t) => (t.transferId === transferId ? { ...t, transferId: undefined } : t)) })),
 
       addCategory: (c) => set((s) => ({ categories: [...s.categories, { ...c, id: uid() }] })),
       updateCategory: (id, patch) =>
@@ -274,6 +303,10 @@ export function migrateData(d: Partial<Data>, version: number): Partial<Data> {
     if (!cats.some((c) => c.id === cash.id)) out.categories = [...cats, cash];
     const rules = out.rules ?? [];
     out.rules = [...rules, ...V3_RULES.filter((r) => !rules.some((x) => x.id === r.id))];
+  }
+  if (version < 4) {
+    // v4 : « Virement interne » devient « Virement compte »
+    out.categories = (out.categories ?? []).map((c) => (c.id === 'trf-internal' && c.name === 'Virement interne' ? { ...c, name: 'Virement compte' } : c));
   }
   return out;
 }

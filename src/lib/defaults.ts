@@ -45,7 +45,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
   // Épargne et virements
   { id: 'sav-per', name: 'Versement PER', kind: 'transfer', icon: '🏖️', color: '#0369a1', group: 'epargne', taxTag: 'per' },
   { id: 'sav-invest', name: 'Épargne et placements', kind: 'transfer', icon: '🌱', color: '#0284c7', group: 'epargne' },
-  { id: 'trf-internal', name: 'Virement interne', kind: 'transfer', icon: '🔁', color: '#cbd5e1' },
+  { id: 'trf-internal', name: 'Virement compte', kind: 'transfer', icon: '🔁', color: '#cbd5e1' },
 ];
 
 /** Règles de catégorisation : libellés fréquents des relevés français. */

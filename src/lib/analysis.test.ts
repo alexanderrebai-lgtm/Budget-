@@ -105,3 +105,26 @@ describe('libellés de néobanque (Nickel)', () => {
     expect(categorize(label, DEFAULT_RULES)).toBe(cat);
   });
 });
+
+describe('virements entre vos comptes', () => {
+  const tx = (id: string, accountId: string, date: string, amount: number, label: string): Transaction => ({ id, accountId, date, amount, label, categoryId: null });
+  it('rapproche le débit et le crédit des deux comptes', async () => {
+    const { findTransferPairs, ownerVariants } = await import('./transfers');
+    const txs = [
+      tx('a', 'bourso', '2026-10-02', -10_800, 'VIR SEPA REBAI ALEXANDER'),
+      tx('b', 'nickel', '2026-10-03', 10_800, 'ALEXANDER REBAI Virement depuis BoursoBank'),
+      tx('c', 'nickel', '2026-10-03', -10_800, 'CB FNAC'), // même montant mais pas un virement, même compte
+      tx('d', 'livret', '2026-10-20', 10_800, 'REMBOURSEMENT'), // trop tard
+    ];
+    expect(findTransferPairs(txs, ownerVariants('Alexander Rebai'))).toEqual([{ debitId: 'a', creditId: 'b' }]);
+  });
+  it('reconnaît le nom dans les deux ordres', async () => {
+    const { ownerVariants, looksLikeTransfer } = await import('./transfers');
+    expect(ownerVariants('Alexander Rebai')).toEqual(['alexander rebai', 'rebai alexander']);
+    expect(looksLikeTransfer('PAIEMENT REBAI ALEXANDER', ownerVariants('Alexander Rebai'))).toBe(true);
+  });
+  it('ne rapproche pas deux opérations du même compte', async () => {
+    const { findTransferPairs } = await import('./transfers');
+    expect(findTransferPairs([tx('a', 'x', '2026-10-02', -500, 'VIR LIVRET'), tx('b', 'x', '2026-10-02', 500, 'VIR LIVRET')], [])).toEqual([]);
+  });
+});

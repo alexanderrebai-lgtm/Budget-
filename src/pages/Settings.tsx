@@ -56,6 +56,7 @@ export default function SettingsPage() {
       <div className="stack">
         <SyncCard />
         <InstallCard />
+        <TransfersCard />
         <div className="grid g2">
           <Card title="Apparence">
             <Segmented
@@ -173,5 +174,36 @@ export default function SettingsPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+function TransfersCard() {
+  const ownerName = useStore((s) => s.settings.ownerName ?? '');
+  const { updateSettings, linkTransfers } = useStore.getState();
+  const [name, setName] = useState(ownerName);
+  return (
+    <Card title="Virements entre vos comptes">
+      <form
+        className="stack"
+        style={{ gap: 10 }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          updateSettings({ ownerName: name.trim() || undefined });
+          const n = linkTransfers();
+          toast(`Nom enregistré.${n ? ` ${n} virement(s) rapproché(s).` : ''}`);
+        }}
+      >
+        <p className="muted small">
+          Quand vous virez de l’argent d’un de vos comptes vers un autre, l’opération apparaît deux fois (débit d’un côté, crédit de l’autre). Cap Budget
+          les relie et les classe en « Virement compte » : elles ne comptent ni comme dépense ni comme revenu. Indiquez votre nom tel qu’il apparaît sur les
+          relevés pour reconnaître aussi les virements vers vos comptes non suivis ici.
+        </p>
+        <div className="row">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Alexander Rebai" style={{ maxWidth: 280 }} aria-label="Nom du titulaire" />
+          <button className="primary" type="submit">Enregistrer et rapprocher</button>
+        </div>
+        <p className="faint small">Les deux ordres sont reconnus (« ALEXANDER REBAI » et « REBAI ALEXANDER »). Le rapprochement est aussi fait automatiquement à chaque import.</p>
+      </form>
+    </Card>
   );
 }
