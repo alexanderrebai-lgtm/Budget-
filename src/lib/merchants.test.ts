@@ -92,3 +92,10 @@ describe('noms d’enseigne en plusieurs mots', () => {
     expect(classify('CB BOULANGERIE PAUL', -5).categoryId).toBe('exp-groceries');
   });
 });
+
+describe('retrait ou retraite', () => {
+  it('ne confond pas l’épargne retraite avec un retrait d’espèces', () => {
+    expect(classify('VIR PER EPARGNE RETRAITE', -100, { defaultRules: DEFAULT_RULES }).categoryId).toBe('sav-per');
+    expect(classify('RETRAIT DAB BNP 12/11', -60, { defaultRules: DEFAULT_RULES }).categoryId).toBe('exp-cash');
+  });
+});

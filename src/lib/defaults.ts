@@ -98,7 +98,8 @@ export const SMOKING_RULES: Rule[] = [
 
 /** Règles ajoutées en v3 (relevés de néobanques : retraits, enseignes courantes). */
 export const V3_RULES: Rule[] = [
-  { id: 'r-v3-1', pattern: 'retrait', categoryId: 'exp-cash' },
+  { id: 'r-v3-1', pattern: 'retrait ', categoryId: 'exp-cash' },
+  { id: 'r-v3-13', pattern: 'epargne retraite', categoryId: 'sav-per' },
   { id: 'r-v3-2', pattern: 'retrait dab', categoryId: 'exp-cash' },
   { id: 'r-v3-3', pattern: 'mc donald', categoryId: 'exp-restaurant' },
   { id: 'r-v3-4', pattern: 'burger', categoryId: 'exp-restaurant' },

@@ -1,6 +1,7 @@
 // Application PC Cap Budget : une fenêtre qui charge la version web compilée (dist/).
 const { app, BrowserWindow, Menu, shell, session } = require('electron');
 const path = require('node:path');
+const { registerAi } = require('./ai.cjs');
 
 const isDev = !app.isPackaged && process.env.ELECTRON_DEV_URL;
 
@@ -27,6 +28,7 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
@@ -93,6 +95,7 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin') template.unshift({ role: 'appMenu', label: 'Cap Budget' });
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
+  registerAi();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

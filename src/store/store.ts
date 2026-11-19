@@ -89,7 +89,7 @@ export const initialData = (): Data => ({
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
 });
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const useStore = create<Data & Actions>()(
   persist(
@@ -318,6 +318,16 @@ export function migrateData(d: Partial<Data>, version: number): Partial<Data> {
   if (version < 4) {
     // v4 : « Virement interne » devient « Virement compte »
     out.categories = (out.categories ?? []).map((c) => (c.id === 'trf-internal' && c.name === 'Virement interne' ? { ...c, name: 'Virement compte' } : c));
+  }
+  if (version < 5) {
+    // v5 : « retrait » ne doit pas reconnaître « retraite » ; règle PER complémentaire
+    const rules = (out.rules ?? []).map((r) => (r.id === 'r-v3-1' && r.pattern === 'retrait' ? { ...r, pattern: 'retrait ' } : r));
+    const per = V3_RULES.find((r) => r.id === 'r-v3-13')!;
+    out.rules = rules.some((r) => r.id === per.id) ? rules : [...rules, per];
+    // opérations mal classées par l'ancienne règle
+    out.transactions = (out.transactions ?? []).map((t) =>
+      t.categoryId === 'exp-cash' && /retraite/i.test(t.label) && !/\bretrait\b/i.test(t.label) ? { ...t, categoryId: /epargne retraite|\bper\b/i.test(t.label) ? 'sav-per' : null } : t,
+    );
   }
   return out;
 }

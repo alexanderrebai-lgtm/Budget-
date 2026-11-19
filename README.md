@@ -43,6 +43,15 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - Pré-remplissage depuis les opérations grâce aux étiquettes fiscales des catégories
 - Guide de 27 leviers (impôt, placements, revenus, dépenses, transmission), revenus exonérés par la loi, repères sur la limite entre optimisation, abus de droit et fraude, calendrier fiscal
 
+**Analyse par l'IA (logiciel PC)**
+- Claude analyse vos dépenses et répond à vos questions (économies chiffrées, abonnements à revoir, budgets proposés)
+- Connexion à votre compte Claude (abonnement Pro ou Max) par le SDK officiel Claude Agent et le moteur Claude Code embarqué, comme Jarvis ; ou clé API facultative, chiffrée par le système
+- Claude reçoit un résumé chiffré (moyennes, catégories, enseignes, prélèvements), jamais les libellés bruts ; nom du titulaire et références bancaires retirés ; aucun outil autorisé
+
+**Estimations et tableau de bord**
+- Estimation mensuelle et annuelle des revenus, dépenses (fixes et variables), reste et épargne, tous comptes confondus, virements internes exclus, par catégorie et par compte (moyenne sur 3, 6 ou 12 mois)
+- Tableau de bord : mois en cours avec projection de fin de mois, patrimoine et épargne de précaution, estimations, 12 derniers mois, répartition, comptes, prélèvements, budgets, points d'attention
+
 **Synchronisation et installation**
 - Compte e-mail / mot de passe, synchronisation automatique (après chaque modification, au retour sur l'application, toutes les minutes)
 - Fusion à trois voies : des modifications faites hors ligne sur plusieurs appareils sont combinées sans perte
@@ -117,3 +126,14 @@ Les calculs sont des estimations fondées sur la loi de finances 2026. Certains 
 plafond de pension alimentaire) sont des valeurs 2025 revalorisées de 0,9 % et doivent être vérifiés.
 Cas non modélisés : revenus exceptionnels (système du quotient), plus-values immobilières, CDHR, réductions
 d'investissement locatif, BIC/BNC au réel. Vérifiez avec le simulateur officiel d'impots.gouv.fr.
+
+## Analyse par l'IA
+
+Dans le logiciel PC, `electron/ai.cjs` pilote le moteur Claude Code embarqué (`@anthropic-ai/claude-agent-sdk`, binaire de la
+plateforme décompressé hors de l'archive asar). Sans clé, il utilise la connexion au compte Claude faite une fois via
+« Se connecter à Claude » ; avec une clé API (console.anthropic.com), il l'utilise à la place, facturée à l'usage.
+La page n'a accès qu'au pont `window.capBudgetDesktop.ai` (preload, isolation de contexte).
+
+À savoir : les conditions d'Anthropic prévoient la connexion par abonnement pour l'usage personnel de Claude Code et du SDK
+Agent, et une clé API pour les produits destinés à d'autres. Pour une diffusion de l'application à d'autres utilisateurs,
+privilégier la clé API.

@@ -270,3 +270,37 @@ details.lever ul { margin: 0; padding-left: 18px; }
   body { overscroll-behavior-y: none; }
 }
 @media (max-width: 900px) { .mobile-nav { top: calc(51px + max(0px, env(safe-area-inset-top) - 10px)); } }
+
+/* Tableau de bord */
+.hero-value { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 2px 0; }
+.hero-side { display: flex; gap: 22px; flex-wrap: wrap; }
+.hero-side > div { display: flex; flex-direction: column; align-items: flex-end; }
+.hero-side strong { font-size: 17px; }
+.projection { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+.projection > div:first-child { display: flex; align-items: baseline; gap: 10px; }
+.projection strong { font-size: 18px; }
+.mini { background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; }
+.mini-value { font-size: 19px; font-weight: 650; margin: 2px 0; }
+.donut-center { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: 15px; }
+@media (max-width: 700px) {
+  .hero-side { gap: 14px; }
+  .hero-side > div { align-items: flex-start; }
+  .hero-value { font-size: 27px; }
+}
+
+/* Estimations */
+.estimate-table td { padding: 10px; }
+.estimate-table td.big { font-size: 18px; font-weight: 650; }
+.estimate-table tr.sub td { color: var(--text-2); font-size: 13px; padding-top: 4px; padding-bottom: 4px; border-bottom: none; }
+.estimate-table tr.sub td:first-child { padding-left: 26px; }
+.estimate-table tr.total td { border-top: 2px solid var(--border); }
+.estimate-table td .dot { margin-right: 6px; }
+.bar-neutral { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar-neutral > div { height: 100%; background: var(--text-3); border-radius: 999px; }
+
+/* Réponses de l'IA */
+.markdown { display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6; }
+.markdown h3 { font-size: 15px; margin-top: 8px; }
+.markdown h3:first-child { margin-top: 0; }
+.markdown ul, .markdown ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.markdown code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }

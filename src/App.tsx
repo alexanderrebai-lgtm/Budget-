@@ -16,6 +16,8 @@ import Taxes from './pages/Taxes';
 import Investments from './pages/Investments';
 import Guide from './pages/Guide';
 import Forecast from './pages/Forecast';
+import Estimates from './pages/Estimates';
+import Analysis from './pages/Analysis';
 import Banks from './pages/Banks';
 import { autoBankSync } from './bank/bank';
 import Freedom from './pages/Freedom';
@@ -35,6 +37,8 @@ const NAV: { section: string; items: { to: string; label: string; icon: string }
       { to: '/banques', label: 'Banques connectées', icon: '⌂' },
       { to: '/import', label: 'Importer', icon: '⇪' },
       { to: '/budgets', label: 'Budgets', icon: '◔' },
+      { to: '/estimations', label: 'Estimations', icon: '∑' },
+      { to: '/analyse', label: 'Analyse IA', icon: '✦' },
       { to: '/previsions', label: 'Prévisions', icon: '⟿' },
       { to: '/recurrents', label: 'Abonnements', icon: '↻' },
     ],
@@ -143,6 +147,8 @@ export default function App() {
             <Route path="/import" element={<Import />} />
             <Route path="/banques" element={<Banks />} />
             <Route path="/budgets" element={<Budgets />} />
+            <Route path="/estimations" element={<Estimates />} />
+            <Route path="/analyse" element={<Analysis />} />
             <Route path="/previsions" element={<Forecast />} />
             <Route path="/liberte" element={<Freedom />} />
             <Route path="/recurrents" element={<Recurring />} />
