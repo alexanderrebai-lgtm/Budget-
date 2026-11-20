@@ -4,6 +4,8 @@ import { Area, AreaChart, Bar, CartesianGrid, Cell, ComposedChart, Line, Pie, Pi
 import { Card, ChartTooltip, PageHead, Progress, Segmented, useCategoryMap } from '../components/ui';
 import { accountBalance, detectRecurring, monthlySummaries, needsWantsSavings, spendingByCategory } from '../lib/analysis';
 import { computeEstimates } from '../lib/estimates';
+import { computeBrief } from '../lib/brief';
+import BriefCard from '../components/BriefCard';
 import { addMonths, dateLabel, euros, kEuros, money, money0, monthKey, monthLabel, percent, shortMonth, todayISO } from '../lib/format';
 import { upcomingEvents } from '../lib/planning';
 import { useViewTransactions } from '../lib/useView';
@@ -39,6 +41,7 @@ export default function Dashboard() {
   const cur = byMonth.get(month) ?? { month, income: 0, expense: 0, saved: 0, net: 0 };
   const est = useMemo(() => computeEstimates(txs, cats, accounts, provisions, thisMonth, 12), [txs, cats, accounts, provisions, thisMonth]);
   const recurring = useMemo(() => detectRecurring(txs), [txs]);
+  const brief = useMemo(() => computeBrief(est, accounts, txs), [est, accounts, txs]);
 
   // Projection de fin de mois : déjà réalisé + échéances restantes + dépenses courantes habituelles.
   const projection = useMemo(() => {
@@ -124,6 +127,9 @@ export default function Dashboard() {
       />
 
       <div className="stack">
+        {/* 0. Bilan express : diagnostic immédiat */}
+        <BriefCard brief={brief} est={est} />
+
         {/* 1. Le mois et le patrimoine */}
         <div className="grid g3">
           <section className="card span2 hero">

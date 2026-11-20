@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { buildFinanceContext } from '../ai/context';
+import { conjonctureText } from '../lib/conjoncture';
 import { desktopAi } from '../ai/desktop';
 import Markdown from '../components/Markdown';
 import { Card, PageHead, toast } from '../components/ui';
@@ -71,7 +72,7 @@ export default function Analysis() {
     setQuestion('');
     // contexte : données chiffrées + deux derniers échanges (pour les questions de suivi)
     const recent = history.slice(0, 2).reverse().map((h) => `Question précédente : ${h.question}\nTa réponse : ${h.answer.slice(0, 1500)}`).join('\n\n');
-    const prompt = `# Mes données financières\n${buildFinanceContext(data)}\n\n${recent ? `# Échanges précédents\n${recent}\n\n` : ''}# Ma demande\n${q.trim()}`;
+    const prompt = `# Conjoncture\n${conjonctureText()}\n\n# Mes données financières\n${buildFinanceContext(data)}\n\n${recent ? `# Échanges précédents\n${recent}\n\n` : ''}# Ma demande\n${q.trim()}`;
     let answer = '';
     const res = await ai.ask(id, prompt, (delta) => {
       answer += delta;

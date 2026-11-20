@@ -48,6 +48,11 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - Connexion à votre compte Claude (abonnement Pro ou Max) par le SDK officiel Claude Agent et le moteur Claude Code embarqué, comme Jarvis ; ou clé API facultative, chiffrée par le système
 - Claude reçoit un résumé chiffré (moyennes, catégories, enseignes, prélèvements), jamais les libellés bruts ; nom du titulaire et références bancaires retirés ; aucun outil autorisé
 
+**Bilan express (tableau de bord)**
+- Diagnostic immédiat sans rien demander : note de santé financière sur 100 (taux d'épargne, épargne de précaution, charges fixes, évolution des dépenses, dettes), synthèse en quelques phrases, 4 signaux prioritaires et prochaine étape
+- Prise en compte de la conjoncture (`src/lib/conjoncture.ts`, mise à jour à chaque version) : inflation, prix de l'énergie, taux des livrets, taux de crédit ; perte de pouvoir d'achat de l'épargne en euros, dépenses comparées à l'inflation
+- Logiciel PC : « le mot de Claude », commentaire personnalisé rédigé automatiquement une fois par jour (désactivable)
+
 **Estimations et tableau de bord**
 - Estimation mensuelle et annuelle des revenus, dépenses (fixes et variables), reste et épargne, tous comptes confondus, virements internes exclus, par catégorie et par compte (moyenne sur 3, 6 ou 12 mois)
 - Tableau de bord : mois en cours avec projection de fin de mois, patrimoine et épargne de précaution, estimations, 12 derniers mois, répartition, comptes, prélèvements, budgets, points d'attention
