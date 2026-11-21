@@ -8,6 +8,9 @@ import { initPwa } from './pwa';
 
 initPwa();
 void initSync();
+void import('./backup/backups').then((b) => b.dailyBackup());
+void import('./lib/conjoncture').then((c) => c.refreshConjoncture());
+void import('./alerts/notify').then((n) => n.startReminders());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

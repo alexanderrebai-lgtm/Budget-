@@ -8,6 +8,8 @@ import {
   signUp,
   syncNow,
   updateConfig,
+  setPassphrase as setE2ePassphrase,
+  disableEncryption,
   updatePassword,
   useSync,
   type SyncStatus,
@@ -189,7 +191,7 @@ export default function SyncCard() {
 
         {signedIn && (
           <details className="lever" open={s.status === 'locked'}>
-            <summary><h3>Chiffrement de bout en bout</h3><span className="badge" style={{ marginLeft: 'auto' }}>{s.config.passphrase ? 'Activé' : 'Désactivé'}</span></summary>
+            <summary><h3>Chiffrement de bout en bout</h3><span className="badge" style={{ marginLeft: 'auto' }}>{s.config.encrypted ? 'Activé' : 'Désactivé'}</span></summary>
             <div className="body">
               <p className="small">
                 Avec une phrase secrète, vos données sont chiffrées sur l’appareil avant l’envoi : ni le serveur ni personne d’autre ne peut les lire.
@@ -201,22 +203,22 @@ export default function SyncCard() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (passphrase.length < 10) return setMessage({ tone: 'danger', text: 'Choisissez une phrase d’au moins 10 caractères.' });
-                  updateConfig({ passphrase });
-                  setPassphrase('');
-                  void syncNow();
-                  toast('Phrase secrète enregistrée sur cet appareil.');
+                  void run(async () => {
+                    await setE2ePassphrase(passphrase);
+                    setPassphrase('');
+                    toast('Chiffrement activé : seule une clé protégée est gardée sur cet appareil, jamais la phrase.');
+                  });
                 }}
               >
-                <input type="password" autoComplete="off" placeholder={s.config.passphrase ? 'Nouvelle phrase secrète' : 'Phrase secrète'} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} style={{ maxWidth: 280 }} />
-                <button className="small primary">{s.config.passphrase ? 'Changer' : 'Activer'}</button>
-                {s.config.passphrase && (
+                <input type="password" autoComplete="off" placeholder={s.config.encrypted ? 'Nouvelle phrase secrète' : 'Phrase secrète'} value={passphrase} onChange={(e) => setPassphrase(e.target.value)} style={{ maxWidth: 280 }} />
+                <button className="small primary">{s.config.encrypted ? 'Changer' : s.status === 'locked' ? 'Déverrouiller' : 'Activer'}</button>
+                {s.config.encrypted && (
                   <button
                     type="button"
                     className="small ghost danger"
                     onClick={() => {
                       if (confirm('Désactiver le chiffrement ? Les données seront de nouveau stockées en clair sur le serveur (protégées par votre compte).')) {
-                        updateConfig({ passphrase: null });
-                        void syncNow();
+                        void disableEncryption();
                       }
                     }}
                   >

@@ -338,3 +338,8 @@ details.lever ul { margin: 0; padding-left: 18px; }
   .brief-top, .brief-bottom { grid-template-columns: 1fr; }
   .brief-signals { grid-template-columns: 1fr; }
 }
+
+.update-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid var(--accent); font-size: 14px;
+}

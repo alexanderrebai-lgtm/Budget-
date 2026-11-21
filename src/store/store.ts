@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { indexedDbStorage } from './storage';
 import { categorize } from '../lib/analysis';
 import { classify, isDefaultRule, learnMerchants } from '../lib/merchants';
 import { findTransferPairs, looksLikeTransfer, ownerVariants, TRANSFER_CATEGORY } from '../lib/transfers';
@@ -254,7 +255,7 @@ export const useStore = create<Data & Actions>()(
       name: 'cap-budget',
       version: SCHEMA_VERSION,
       migrate: (persisted, version) => migrateData(persisted as Partial<Data>, version) as never,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => indexedDbStorage),
       partialize: (s) => {
         const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
         return { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings };
@@ -349,4 +350,15 @@ export function parseBackup(text: string): Data {
   const d = json.data as Partial<Data>;
   if (!Array.isArray(d.transactions) || !Array.isArray(d.accounts)) throw new Error('Sauvegarde incomplète.');
   return { ...initialData(), ...migrateData(d, Number(json.version) || 1) } as Data;
+}
+
+/** Résolu quand les données enregistrées ont été chargées (le chargement IndexedDB est asynchrone). */
+export function whenHydrated(): Promise<void> {
+  if (useStore.persist.hasHydrated()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsub = useStore.persist.onFinishHydration(() => {
+      unsub();
+      resolve();
+    });
+  });
 }

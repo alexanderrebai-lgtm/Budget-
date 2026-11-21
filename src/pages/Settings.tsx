@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import SyncCard from '../components/SyncCard';
 import InstallCard from '../components/InstallCard';
+import BackupCard from '../components/BackupCard';
+import RemindersCard from '../components/RemindersCard';
+import { snapshotNow } from '../backup/backups';
 import { Card, CategorySelect, PageHead, Segmented, download, toast, useCategoryMap } from '../components/ui';
 import { demoData } from '../lib/demo';
 import type { Category, NeedGroup, TaxTag } from '../lib/types';
@@ -42,6 +45,7 @@ export default function SettingsPage() {
     try {
       const data = parseBackup(await file.text());
       if (confirm('Remplacer toutes vos données par cette sauvegarde ?')) {
+        await snapshotNow('Avant restauration d’un fichier');
         replaceAll(data);
         toast('Sauvegarde restaurée.');
       }
@@ -55,6 +59,8 @@ export default function SettingsPage() {
       <PageHead title="Réglages" />
       <div className="stack">
         <SyncCard />
+        <BackupCard />
+        <RemindersCard />
         <InstallCard />
         <TransfersCard />
         <div className="grid g2">
@@ -79,8 +85,8 @@ export default function SettingsPage() {
                 </label>
               </div>
               <div className="row">
-                <button className="small" onClick={() => confirm('Remplacer vos données par le jeu de démonstration ?') && replaceAll(demoData())}>Charger la démo</button>
-                <button className="small danger" onClick={() => confirm('Effacer définitivement toutes les données ?') && reset()}>Tout effacer</button>
+                <button className="small" onClick={async () => { if (confirm('Remplacer vos données par le jeu de démonstration ?')) { await snapshotNow('Avant chargement de la démo'); replaceAll(demoData()); } }}>Charger la démo</button>
+                <button className="small danger" onClick={async () => { if (confirm('Effacer toutes les données ? Une copie est gardée dans les sauvegardes automatiques.')) { await snapshotNow('Avant effacement'); reset(); } }}>Tout effacer</button>
               </div>
             </div>
           </Card>

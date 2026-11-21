@@ -5,6 +5,7 @@ import { Card, ChartTooltip, PageHead, Progress, Segmented, useCategoryMap } fro
 import { accountBalance, detectRecurring, monthlySummaries, needsWantsSavings, spendingByCategory } from '../lib/analysis';
 import { computeEstimates } from '../lib/estimates';
 import { computeBrief } from '../lib/brief';
+import { useConjoncture } from '../lib/conjoncture';
 import BriefCard from '../components/BriefCard';
 import { addMonths, dateLabel, euros, kEuros, money, money0, monthKey, monthLabel, percent, shortMonth, todayISO } from '../lib/format';
 import { upcomingEvents } from '../lib/planning';
@@ -41,7 +42,8 @@ export default function Dashboard() {
   const cur = byMonth.get(month) ?? { month, income: 0, expense: 0, saved: 0, net: 0 };
   const est = useMemo(() => computeEstimates(txs, cats, accounts, provisions, thisMonth, 12), [txs, cats, accounts, provisions, thisMonth]);
   const recurring = useMemo(() => detectRecurring(txs), [txs]);
-  const brief = useMemo(() => computeBrief(est, accounts, txs), [est, accounts, txs]);
+  const conjData = useConjoncture((s) => s.data);
+  const brief = useMemo(() => computeBrief(est, accounts, txs, undefined, conjData), [est, accounts, txs, conjData]);
 
   // Projection de fin de mois : déjà réalisé + échéances restantes + dépenses courantes habituelles.
   const projection = useMemo(() => {

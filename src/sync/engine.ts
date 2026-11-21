@@ -1,7 +1,7 @@
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { create } from 'zustand';
-import { initialData, useStore, type Data } from '../store/store';
-import { open, PassphraseRequiredError, seal, WrongPassphraseError, type Payload } from './crypto';
+import { initialData, useStore, whenHydrated, type Data } from '../store/store';
+import { deriveKeyMaterial, open, PassphraseRequiredError, seal, sealedWith, userSalt, WrongPassphraseError, type KeyMaterial, type Payload } from './crypto';
 import { idbDelete, idbGet, idbSet } from './idb';
 import { fingerprint, mergeData } from './merge';
 
@@ -13,7 +13,10 @@ export interface SyncConfig {
   url: string;
   key: string;
   /** Phrase secrète de chiffrement de bout en bout (facultative), conservée sur cet appareil. */
-  passphrase: string | null;
+  /** Ancienne version : phrase en clair. Migrée vers une clé non exportable puis effacée. */
+  passphrase?: string | null;
+  /** Chiffrement de bout en bout activé (la clé est dans IndexedDB, jamais la phrase). */
+  encrypted?: boolean;
   auto: boolean;
 }
 
@@ -22,6 +25,7 @@ function readConfig(): SyncConfig {
     url: import.meta.env.VITE_SUPABASE_URL ?? '',
     key: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
     passphrase: null,
+    encrypted: false,
     auto: true,
   };
   try {
@@ -125,6 +129,33 @@ interface Base {
 }
 const baseKey = (uid: string) => `base:${uid}`;
 
+/* ---------- Clé de chiffrement (jamais la phrase en clair) ---------- */
+
+const keyKey = (uid: string) => `e2e:${uid}`;
+/** Phrase saisie pendant cette session uniquement (pour ouvrir des données chiffrées par une ancienne version). */
+let sessionPassphrase: string | null = null;
+
+async function loadKey(uid: string): Promise<KeyMaterial | null> {
+  return (await idbGet<KeyMaterial>(keyKey(uid)).catch(() => undefined)) ?? null;
+}
+
+/** Active (ou change) le chiffrement : dérive la clé du compte, la garde dans IndexedDB, oublie la phrase. */
+export async function setPassphrase(passphrase: string) {
+  if (!userId) throw new Error('Connectez-vous d’abord.');
+  const km = await deriveKeyMaterial(passphrase, await userSalt(userId));
+  await idbSet(keyKey(userId), km);
+  sessionPassphrase = passphrase;
+  updateConfig({ passphrase: null, encrypted: true });
+  void syncNow();
+}
+
+export async function disableEncryption() {
+  if (userId) await idbDelete(keyKey(userId)).catch(() => {});
+  sessionPassphrase = null;
+  updateConfig({ passphrase: null, encrypted: false });
+  void syncNow();
+}
+
 /* ---------- Session ---------- */
 
 let userId: string | null = null;
@@ -218,7 +249,8 @@ let pendingChoice: 'merge' | 'replace-local' | 'replace-remote' | null = null;
 
 export function resolveFirstSync(choice: 'merge' | 'replace-local' | 'replace-remote') {
   pendingChoice = choice;
-  void syncNow();
+  // copie de sécurité avant de fusionner ou de remplacer les données de cet appareil
+  void import('../backup/backups').then((b) => b.snapshotNow('Avant la première synchronisation')).finally(() => void syncNow());
 }
 
 export function syncNow(): Promise<void> {
@@ -242,6 +274,8 @@ function hasUserContent(d: Data) {
 }
 
 async function syncOnce(attempt = 0): Promise<void> {
+  // ne jamais envoyer un état vide avant le chargement des données locales
+  await whenHydrated();
   const c = getClient();
   if (!c || !userId) return;
   if (!navigator.onLine) {
@@ -249,7 +283,15 @@ async function syncOnce(attempt = 0): Promise<void> {
     return;
   }
   const uid = userId;
-  const { passphrase } = useSync.getState().config;
+  // migration : une phrase encore stockée en clair devient une clé non exportable
+  const legacy = useSync.getState().config.passphrase;
+  if (legacy) await setPassphrase(legacy);
+  const encrypted = useSync.getState().config.encrypted ?? false;
+  const km = encrypted ? await loadKey(uid) : null;
+  if (encrypted && !km) {
+    patch({ status: 'locked', error: 'Saisissez votre phrase secrète sur cet appareil pour déchiffrer vos données.' });
+    return;
+  }
   patch({ status: 'syncing', error: null });
 
   try {
@@ -260,7 +302,7 @@ async function syncOnce(attempt = 0): Promise<void> {
     const local = localData();
 
     const push = async (data: Data, baseRevision: number) => {
-      const payload = await seal(data, passphrase);
+      const payload = await seal(data, km);
       const { data: res, error: e } = await c.rpc('push_vault', { p_payload: payload, p_base_revision: baseRevision, p_device: deviceName() });
       if (e) throw e;
       const r = (Array.isArray(res) ? res[0] : res) as { ok: boolean; revision: number };
@@ -282,7 +324,7 @@ async function syncOnce(attempt = 0): Promise<void> {
     // 2. Déchiffrement de la version distante.
     let remote: Data;
     try {
-      remote = normalizeRemote(await open(row.payload as Payload, passphrase));
+      remote = normalizeRemote(await open(row.payload as Payload, km, sessionPassphrase));
     } catch (e) {
       if (e instanceof PassphraseRequiredError || e instanceof WrongPassphraseError) {
         patch({ status: 'locked', error: e.message });
@@ -292,8 +334,9 @@ async function syncOnce(attempt = 0): Promise<void> {
     }
     // Si le distant est chiffré et que la phrase locale manque, on l'aurait signalé ; si le distant est en clair
     // alors qu'une phrase est définie, le prochain envoi le chiffrera.
-    const remoteEncrypted = (row.payload as Payload).enc !== 'none';
-    const encryptionChanged = remoteEncrypted !== Boolean(passphrase);
+    // à rechiffrer si le chiffrement a été activé/désactivé ou si la clé a changé
+    const remotePayload = row.payload as Payload;
+    const encryptionChanged = km ? !sealedWith(remotePayload, km) : remotePayload.enc !== 'none';
 
     // 3. Premier couplage de cet appareil.
     if (!base) {

@@ -1,0 +1,6 @@
+{
+  "_doc": "Taux lus par Cap Budget au démarrage (sans nouvelle version de l'application). L'inflation vient d'Eurostat en direct.",
+  "asOf": "2026-11-21",
+  "savings": { "livretA": 0.017, "ldds": 0.017, "lep": 0.025, "pel": 0.02, "since": "1er août 2026", "nextRevision": "1er février 2027" },
+  "credit": { "mortgage20": 0.037, "usury20": 0.054 }
+}

@@ -2,6 +2,8 @@
 const { app, BrowserWindow, Menu, shell, session } = require('electron');
 const path = require('node:path');
 const { registerAi } = require('./ai.cjs');
+const { registerBackup } = require('./backup.cjs');
+const { setupUpdater } = require('./updater.cjs');
 
 const isDev = !app.isPackaged && process.env.ELECTRON_DEV_URL;
 
@@ -59,8 +61,9 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
-  // Refuse toute demande de permission (caméra, micro, géolocalisation…) : l'application n'en a pas besoin.
-  session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+  // Seules les notifications (rappels) sont autorisées ; caméra, micro, géolocalisation… sont refusés.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'notifications'));
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'notifications');
 
   const template = [
     {
@@ -88,6 +91,8 @@ app.whenReady().then(() => {
         { role: 'zoomOut', label: 'Zoom arrière' },
         { type: 'separator' },
         { role: 'togglefullscreen', label: 'Plein écran' },
+        { type: 'separator' },
+        { label: 'Rechercher une mise à jour', click: () => require('./updater.cjs').checkNow() },
         ...(app.isPackaged ? [] : [{ role: 'toggleDevTools', label: 'Outils de développement' }]),
       ],
     },
@@ -96,6 +101,8 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
   registerAi();
+  registerBackup();
+  setupUpdater();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -1,6 +1,6 @@
 import { initialData, type Data } from '../store/store';
 import { mergeData } from './merge';
-import { open, seal, WrongPassphraseError, PassphraseRequiredError } from './crypto';
+import { deriveKeyMaterial, open, seal, userSalt, WrongPassphraseError, PassphraseRequiredError } from './crypto';
 import type { Transaction } from '../lib/types';
 
 const tx = (id: string, amount = -100, label = 'X'): Transaction => ({ id, date: '2026-10-01', amount, label, accountId: 'a', categoryId: null });
@@ -53,20 +53,37 @@ describe('fusion à trois voies', () => {
 describe('chiffrement', () => {
   const data = { hello: 'monde', n: [1, 2, 3] };
 
-  it('aller-retour avec la bonne phrase', async () => {
-    const sealed = await seal(data, 'correct horse battery');
+  it('aller-retour avec la clé du compte', async () => {
+    const km = await deriveKeyMaterial('correct horse battery', await userSalt('user-1'));
+    const sealed = await seal(data, km);
     expect(sealed.enc).toBe('aes-gcm');
     expect(JSON.stringify(sealed)).not.toContain('monde');
-    expect(await open(sealed, 'correct horse battery')).toEqual(data);
+    expect(await open(sealed, km)).toEqual(data);
+  });
+
+  it('la même phrase donne la même clé sur un autre appareil du même compte', async () => {
+    const a = await deriveKeyMaterial('phrase', await userSalt('user-1'));
+    const b = await deriveKeyMaterial('phrase', await userSalt('user-1'));
+    expect(await open(await seal(data, a), b)).toEqual(data);
   });
 
   it('refuse une mauvaise phrase', async () => {
-    const sealed = await seal(data, 'phrase A');
-    await expect(open(sealed, 'phrase B')).rejects.toBeInstanceOf(WrongPassphraseError);
+    const good = await deriveKeyMaterial('phrase A', await userSalt('u'));
+    const bad = await deriveKeyMaterial('phrase B', await userSalt('u'));
+    const sealed = await seal(data, good);
+    await expect(open(sealed, bad)).rejects.toBeInstanceOf(WrongPassphraseError);
     await expect(open(sealed, null)).rejects.toBeInstanceOf(PassphraseRequiredError);
   });
 
-  it('stocke en clair sans phrase', async () => {
+  it('ouvre un contenu chiffré avec un autre sel grâce à la phrase saisie', async () => {
+    const old = await deriveKeyMaterial('phrase', crypto.getRandomValues(new Uint8Array(16)));
+    const current = await deriveKeyMaterial('phrase', await userSalt('u'));
+    const sealed = await seal(data, old);
+    await expect(open(sealed, current)).rejects.toBeInstanceOf(PassphraseRequiredError);
+    expect(await open(sealed, current, 'phrase')).toEqual(data);
+  });
+
+  it('stocke en clair sans clé', async () => {
     expect(await open(await seal(data, null), null)).toEqual(data);
   });
 });

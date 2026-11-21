@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Card, ChartTooltip, Empty, NumberField, PageHead, Segmented, Stat, toast } from '../components/ui';
-import { accountBalance, detectRecurring, merchantKey } from '../lib/analysis';
 import { dateLabel, euros, kEuros, money, money0, toCents, todayISO } from '../lib/format';
-import { forecastBalance, upcomingEvents } from '../lib/planning';
+import { cashForecast } from '../lib/cashForecast';
 import { useStore } from '../store/store';
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -18,31 +17,7 @@ export default function Forecast() {
   const today = todayISO();
   const horizon = Number(days);
 
-  const model = useMemo(() => {
-    const cash = accounts.filter((a) => a.type === 'courant' && !a.archived);
-    const cashIds = new Set(cash.map((a) => a.id));
-    const cashTxs = txs.filter((t) => cashIds.has(t.accountId));
-    const start = cash.reduce((s, a) => s + accountBalance(a, txs), 0);
-    const recurring = detectRecurring(cashTxs);
-    const recurringKeys = new Set(recurring.map((r) => r.key));
-    const transferCats = new Set(categories.filter((c) => c.kind === 'transfer').map((c) => c.id));
-    // dépenses courantes hors prélèvements récurrents, sur les 90 derniers jours
-    const since = new Date(`${today}T12:00:00`);
-    since.setDate(since.getDate() - 90);
-    const sinceIso = since.toISOString().slice(0, 10);
-    let variable = 0;
-    for (const t of cashTxs) {
-      if (t.date < sinceIso || t.date > today || t.amount >= 0) continue;
-      if (t.categoryId && transferCats.has(t.categoryId)) continue;
-      if (recurringKeys.has(`${merchantKey(t.label)}|-`)) continue;
-      variable += -t.amount;
-    }
-    const daily = Math.round(variable / 90);
-    const events = upcomingEvents(recurring, provisions, today, horizon);
-    const points = forecastBalance(start, events, daily, today, horizon);
-    const low = points.reduce((m, p) => (p.balance < m.balance ? p : m), points[0]);
-    return { start, daily, events, points, low, hasCash: cash.length > 0 };
-  }, [txs, accounts, categories, provisions, today, horizon]);
+  const model = useMemo(() => cashForecast(txs, accounts, categories, provisions, today, horizon), [txs, accounts, categories, provisions, today, horizon]);
 
   const chart = model.points.map((p) => ({ name: dateLabel(p.date).replace(/ \d{4}$/, ''), Solde: p.balance / 100 }));
   const end = model.points[model.points.length - 1];

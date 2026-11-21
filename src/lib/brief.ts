@@ -4,7 +4,7 @@
  * localement à partir des opérations, des comptes et de la conjoncture.
  */
 import { accountBalance } from './analysis';
-import { CONJONCTURE } from './conjoncture';
+import { conj, type Conjoncture } from './conjoncture';
 import type { Estimates } from './estimates';
 import type { Account, Category, Cents, Transaction } from './types';
 
@@ -40,7 +40,7 @@ const SAVINGS_ACCOUNTS = new Set(['livret', 'epargne']);
 const eur = (c: number) => `${Math.round(c / 100).toLocaleString('fr-FR')} €`;
 const pct = (r: number, d = 0) => `${(r * 100).toLocaleString('fr-FR', { maximumFractionDigits: d })} %`;
 
-export function computeBrief(est: Estimates, accounts: Account[], txs: Transaction[], _categories?: Map<string, Category>): Brief {
+export function computeBrief(est: Estimates, accounts: Account[], txs: Transaction[], _categories?: Map<string, Category>, CONJONCTURE: Conjoncture = conj()): Brief {
   const empty: Brief = { ready: false, score: 0, label: '', tone: 'info', headline: '', signals: [], next: null, spendingTrend: null, cashErosion: 0, components: [] };
   if (est.coveredMonths < 1 || est.income.monthly <= 0) return empty;
 

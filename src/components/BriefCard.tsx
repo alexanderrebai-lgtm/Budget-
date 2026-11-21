@@ -4,7 +4,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { generateDailyBrief, useDailyBrief } from '../ai/dailyBrief';
 import { desktopAi } from '../ai/desktop';
 import type { Brief, Tone } from '../lib/brief';
-import { CONJONCTURE } from '../lib/conjoncture';
+import { useConjoncture } from '../lib/conjoncture';
 import type { Estimates } from '../lib/estimates';
 import { shortMonth } from '../lib/format';
 import { useStore } from '../store/store';
@@ -31,6 +31,8 @@ function Gauge({ score, tone }: { score: number; tone: Tone }) {
 
 export default function BriefCard({ brief, est }: { brief: Brief; est: Estimates }) {
   const data = useStore();
+  const CONJONCTURE = useConjoncture((s) => s.data);
+  const live = useConjoncture((s) => s.live);
   const ai = desktopAi();
   const daily = useDailyBrief();
 
@@ -145,7 +147,7 @@ export default function BriefCard({ brief, est }: { brief: Brief; est: Estimates
         <div className="brief-macro">
           <div className="small" style={{ fontWeight: 600 }}>Conjoncture <span className="faint">au {new Date(`${CONJONCTURE.asOf}T12:00:00`).toLocaleDateString('fr-FR')}</span></div>
           <div className="macro-chips">
-            <span className="macro"><span className="faint">Inflation</span><strong>{pct(CONJONCTURE.inflation.yoy)}</strong></span>
+            <span className="macro" title={`${CONJONCTURE.inflation.source}, ${CONJONCTURE.inflation.period}`}><span className="faint">Inflation{live ? ' (IPCH)' : ''}</span><strong>{pct(CONJONCTURE.inflation.yoy)}</strong></span>
             <span className="macro"><span className="faint">Énergie</span><strong>+{pct(CONJONCTURE.inflation.energy, 0)}</strong></span>
             <span className="macro"><span className="faint">Livret A</span><strong>{pct(CONJONCTURE.savings.livretA)}</strong></span>
             <span className="macro"><span className="faint">LEP</span><strong>{pct(CONJONCTURE.savings.lep)}</strong></span>

@@ -1,5 +1,6 @@
 import { Card, toast } from './ui';
 import { isElectron, isIos, promptInstall, useInstall } from '../pwa';
+import { useUpdateState } from './UpdateBanner';
 
 /** Lien vers les installateurs PC générés par GitHub Actions (page des versions du dépôt). */
 export const DESKTOP_DOWNLOADS = 'https://github.com/alexanderrebai-lgtm/Budget-/releases/latest';
@@ -14,11 +15,44 @@ export function InstallButton({ className = 'small' }: { className?: string }) {
   );
 }
 
+const UPDATE_LABEL: Record<string, string> = {
+  idle: '',
+  checking: 'Recherche d’une mise à jour…',
+  'up-to-date': 'Vous avez la dernière version.',
+  downloading: 'Téléchargement de la nouvelle version…',
+  ready: 'Nouvelle version prête : redémarrez pour l’installer.',
+  'available-manual': 'Nouvelle version disponible.',
+  error: 'Impossible de vérifier les mises à jour pour le moment.',
+};
+
+function DesktopUpdateRow() {
+  const { api, state } = useUpdateState();
+  if (!api) return null;
+  return (
+    <div className="row between callout small">
+      <span>
+        <strong>Mises à jour automatiques</strong> · {state ? UPDATE_LABEL[state.status] : ''}
+        {state?.status === 'downloading' && state.percent ? ` ${state.percent} %` : ''}
+      </span>
+      <span className="row" style={{ gap: 6 }}>
+        {state?.status === 'ready' ? (
+          <button className="small primary" onClick={() => void api.install()}>Redémarrer et installer</button>
+        ) : state?.status === 'available-manual' ? (
+          <button className="small primary" onClick={() => void api.openReleases()}>Télécharger</button>
+        ) : (
+          <button className="small" onClick={() => void api.check()} disabled={state?.status === 'checking' || state?.status === 'downloading'}>Rechercher</button>
+        )}
+      </span>
+    </div>
+  );
+}
+
 export default function InstallCard() {
   const { prompt, installed } = useInstall();
   return (
     <Card title="Installer Cap Budget" actions={installed ? <span className="badge accent">{isElectron() ? 'Application PC' : 'Installée'}</span> : undefined}>
       <div className="stack" style={{ gap: 12 }}>
+        <DesktopUpdateRow />
         {prompt && (
           <div className="row between callout accent">
             <span>Installez l’application sur cet appareil : icône sur l’écran d’accueil, fenêtre dédiée, fonctionne hors ligne.</span>

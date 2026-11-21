@@ -85,8 +85,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
+          # latest*.yml et .blockmap : lus par les mises à jour automatiques du logiciel
           files: |
             release/*.exe
             release/*.dmg
             release/*.AppImage
             release/*.deb
+            release/*.blockmap
+            release/latest*.yml

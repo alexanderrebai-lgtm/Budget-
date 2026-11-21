@@ -47,60 +47,70 @@ async function streamBytes(data: Uint8Array, stream: CompressionStream | Decompr
   return new Uint8Array(await new Response(out).arrayBuffer());
 }
 
-const keyCache = new Map<string, CryptoKey>();
+/** Clé de chiffrement prête à l'emploi (non exportable), avec les paramètres qui l'ont produite. */
+export interface KeyMaterial {
+  key: CryptoKey;
+  salt: string;
+  iterations: number;
+}
 
 async function deriveKey(passphrase: string, salt: Uint8Array, iterations: number): Promise<CryptoKey> {
-  const id = `${passphrase}|${toB64(salt)}|${iterations}`;
-  const cached = keyCache.get(id);
-  if (cached) return cached;
   const material = await subtle().importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
-  const key = await subtle().deriveKey(
+  return subtle().deriveKey(
     { name: 'PBKDF2', hash: 'SHA-256', salt: salt as BufferSource, iterations },
     material,
     { name: 'AES-GCM', length: 256 },
-    false,
+    false, // non exportable : la clé ne peut pas être lue, seulement utilisée
     ['encrypt', 'decrypt'],
   );
-  keyCache.set(id, key);
-  return key;
 }
 
-/** Sel réutilisé tant que la phrase ne change pas, pour profiter du cache de clé. */
-let saltForSession: { passphrase: string; salt: Uint8Array } | null = null;
+/** Sel propre à chaque compte : la même phrase donne la même clé sur tous les appareils de l'utilisateur. */
+export async function userSalt(userId: string): Promise<Uint8Array> {
+  const h = await subtle().digest('SHA-256', new TextEncoder().encode(`cap-budget-e2e:${userId}`));
+  return new Uint8Array(h).slice(0, 16);
+}
 
-export async function seal(data: unknown, passphrase: string | null): Promise<Payload> {
-  if (!passphrase) return { format: 'cap-budget', v: 1, enc: 'none', data };
-  if (!saltForSession || saltForSession.passphrase !== passphrase) {
-    saltForSession = { passphrase, salt: crypto.getRandomValues(new Uint8Array(16)) };
-  }
-  const salt = saltForSession.salt;
+export async function deriveKeyMaterial(passphrase: string, salt: Uint8Array, iterations = ITERATIONS): Promise<KeyMaterial> {
+  return { key: await deriveKey(passphrase, salt, iterations), salt: toB64(salt), iterations };
+}
+
+export async function seal(data: unknown, km: KeyMaterial | null): Promise<Payload> {
+  if (!km) return { format: 'cap-budget', v: 1, enc: 'none', data };
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(passphrase, salt, ITERATIONS);
   const packed = await streamBytes(new TextEncoder().encode(JSON.stringify(data)), new CompressionStream('gzip'));
-  const ct = await subtle().encrypt({ name: 'AES-GCM', iv: iv as BufferSource }, key, packed as BufferSource);
+  const ct = await subtle().encrypt({ name: 'AES-GCM', iv: iv as BufferSource }, km.key, packed as BufferSource);
   return {
     format: 'cap-budget',
     v: 1,
     enc: 'aes-gcm',
-    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: ITERATIONS, salt: toB64(salt) },
+    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: km.iterations, salt: km.salt },
     iv: toB64(iv),
     ct: toB64(ct),
   };
 }
 
-export async function open(payload: Payload, passphrase: string | null): Promise<unknown> {
+/** Le contenu chiffré l'a-t-il été avec cette clé (même sel, mêmes paramètres) ? */
+export const sealedWith = (payload: Payload, km: KeyMaterial | null) =>
+  payload.enc === 'aes-gcm' && !!km && payload.kdf.salt === km.salt && payload.kdf.iterations === km.iterations;
+
+/**
+ * Déchiffre avec la clé enregistrée ; si le contenu a été chiffré avec d'autres paramètres
+ * (ancienne version, autre appareil), la phrase secrète saisie dans la session est nécessaire.
+ */
+export async function open(payload: Payload, km: KeyMaterial | null, passphrase: string | null = null): Promise<unknown> {
   if (payload?.format !== 'cap-budget') throw new Error('Format de données distant inconnu.');
   if (payload.enc === 'none') return payload.data;
-  if (!passphrase) throw new PassphraseRequiredError();
-  const salt = fromB64(payload.kdf.salt);
-  const key = await deriveKey(passphrase, salt, payload.kdf.iterations);
+  let key: CryptoKey;
+  if (sealedWith(payload, km)) key = km!.key;
+  else if (passphrase) key = await deriveKey(passphrase, fromB64(payload.kdf.salt), payload.kdf.iterations);
+  else throw new PassphraseRequiredError();
   let plain: ArrayBuffer;
   try {
     plain = await subtle().decrypt({ name: 'AES-GCM', iv: fromB64(payload.iv) as BufferSource }, key, fromB64(payload.ct) as BufferSource);
   } catch {
     throw new WrongPassphraseError();
   }
-  saltForSession = { passphrase, salt };
   const json = await streamBytes(new Uint8Array(plain), new DecompressionStream('gzip'));
   return JSON.parse(new TextDecoder().decode(json));
 }

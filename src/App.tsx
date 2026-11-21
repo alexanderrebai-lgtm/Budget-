@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from './components/ui';
+import UpdateBanner from './components/UpdateBanner';
 import { SyncBadge } from './components/SyncCard';
 import { InstallButton } from './components/InstallCard';
 import { accountBalance } from './lib/analysis';
@@ -23,7 +24,7 @@ import { autoBankSync } from './bank/bank';
 import Freedom from './pages/Freedom';
 import SettingsPage from './pages/Settings';
 import Welcome from './pages/Welcome';
-import { useStore } from './store/store';
+import { useStore, whenHydrated } from './store/store';
 import { useSync } from './sync/engine';
 
 const useSyncEmail = () => useSync((s) => s.email);
@@ -71,19 +72,29 @@ function useTheme() {
 }
 
 /** Enregistre la valeur du patrimoine du mois en cours (historique). */
-function useNetWorthSnapshot() {
+function useNetWorthSnapshot(enabled: boolean) {
   const accounts = useStore((s) => s.accounts);
   const txs = useStore((s) => s.transactions);
   const record = useStore((s) => s.recordSnapshot);
   const total = useMemo(() => accounts.filter((a) => !a.archived).reduce((s, a) => s + accountBalance(a, txs), 0), [accounts, txs]);
   useEffect(() => {
-    if (accounts.length) record(todayISO().slice(0, 7), total);
-  }, [accounts.length, total, record]);
+    if (enabled && accounts.length) record(todayISO().slice(0, 7), total);
+  }, [enabled, accounts.length, total, record]);
+}
+
+function useHydrated() {
+  const [hydrated, setHydrated] = useState(() => useStore.persist.hasHydrated());
+  useEffect(() => {
+    if (hydrated) return;
+    void whenHydrated().then(() => setHydrated(true));
+  }, [hydrated]);
+  return hydrated;
 }
 
 export default function App() {
   useTheme();
-  useNetWorthSnapshot();
+  const hydrated = useHydrated();
+  useNetWorthSnapshot(hydrated);
   const onboarded = useStore((s) => s.settings.onboarded);
   const syncEmail = useSyncEmail();
   // mise à jour automatique des comptes bancaires reliés (au plus toutes les 6 h)
@@ -94,6 +105,13 @@ export default function App() {
   }, [syncEmail]);
   const all = NAV.flatMap((s) => s.items);
 
+  if (!hydrated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <span className="brand-mark" style={{ width: 44, height: 44, fontSize: 20, borderRadius: 12 }}>€</span>
+      </div>
+    );
+  }
   if (!onboarded) return <Welcome />;
 
   return (
@@ -141,6 +159,7 @@ export default function App() {
           ))}
         </nav>
         <main className="main">
+          <UpdateBanner />
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<Transactions />} />

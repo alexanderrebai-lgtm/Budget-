@@ -1,7 +1,7 @@
 {
   "name": "budget-fiscal",
   "private": true,
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -91,9 +91,18 @@
     },
     "asarUnpack": [
       "node_modules/@anthropic-ai/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "alexanderrebai-lgtm",
+        "repo": "Budget-",
+        "releaseType": "release"
+      }
     ]
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.328"
+    "@anthropic-ai/claude-agent-sdk": "^0.3.328",
+    "electron-updater": "^6.8.11"
   }
 }

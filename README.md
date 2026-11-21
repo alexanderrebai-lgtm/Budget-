@@ -57,6 +57,14 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - Estimation mensuelle et annuelle des revenus, dépenses (fixes et variables), reste et épargne, tous comptes confondus, virements internes exclus, par catégorie et par compte (moyenne sur 3, 6 ou 12 mois)
 - Tableau de bord : mois en cours avec projection de fin de mois, patrimoine et épargne de précaution, estimations, 12 derniers mois, répartition, comptes, prélèvements, budgets, points d'attention
 
+**Fiabilité et sécurité**
+- Données dans IndexedDB (plus de limite de ~5 Mo), migration automatique depuis localStorage
+- Sauvegardes automatiques : une copie par jour (14 jours) et avant chaque action risquée, restaurables en un clic ; le logiciel PC écrit aussi un fichier par jour dans `Documents/Cap Budget/Sauvegardes` (30 jours)
+- Mises à jour automatiques du logiciel PC (Windows et Linux ; simple avertissement sur macOS, l'installation automatique exigeant une application signée)
+- Rappels par notification : gros prélèvement dans les 3 jours, découvert prévu, budget presque atteint ou dépassé
+- Conjoncture à jour : inflation, énergie et inflation sous-jacente chargées depuis Eurostat (cache 24 h) ; taux des livrets et du crédit lus dans `public/conjoncture.json`
+- Politique de sécurité du contenu (CSP) ; la phrase de chiffrement n'est plus stockée : seule une clé non exportable, propre au compte, est gardée dans IndexedDB
+
 **Synchronisation et installation**
 - Compte e-mail / mot de passe, synchronisation automatique (après chaque modification, au retour sur l'application, toutes les minutes)
 - Fusion à trois voies : des modifications faites hors ligne sur plusieurs appareils sont combinées sans perte
