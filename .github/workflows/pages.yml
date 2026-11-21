@@ -1,11 +1,12 @@
 # Publie la version web (installable sur téléphone et ordinateur) sur GitHub Pages
 # à chaque mise à jour de la branche principale.
-# Prérequis : Settings → Pages → Source : « GitHub Actions ».
+# GitHub Pages est activé automatiquement (sinon : Settings → Pages → Source : « GitHub Actions »).
 name: Version web
 
 on:
   push:
-    branches: [main]
+    # branche par défaut du dépôt (et main si elle est créée plus tard)
+    branches: [main, claude/gallant-gauss-gsf0ue]
   workflow_dispatch:
 
 permissions:
@@ -33,6 +34,9 @@ jobs:
       - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5
+        with:
+          # active GitHub Pages (source : GitHub Actions) si ce n'est pas déjà fait
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
