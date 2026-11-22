@@ -9,6 +9,7 @@ import { addMonths, monthKey, monthLabel, normalize, todayISO } from '../lib/for
 import { cleanLabel, displayMerchant } from '../lib/merchants';
 import type { Data } from '../store/store';
 import { ownerVariants } from '../lib/transfers';
+import { pauseStats } from '../lib/pauses';
 import type { Category } from '../lib/types';
 
 const eur = (c: number) => `${Math.round(c / 100).toLocaleString('fr-FR')} €`;
@@ -84,6 +85,10 @@ export function buildFinanceContext(d: Data): string {
     lines.push('Objectifs : ' + d.goals.map((g) => `${g.name} ${eur(g.target)}${g.deadline ? ` avant ${g.deadline}` : ''}`).join(' ; ') + '.');
   }
   if (d.provisions.length) lines.push('Dépenses annuelles prévues : ' + d.provisions.map((p) => `${p.name} ${eur(p.amount)}`).join(', ') + '.');
+  if (d.pauses?.length) {
+    const ps = pauseStats(d.pauses);
+    lines.push(`Pause avant achat : ${ps.dropped} envie(s) abandonnée(s) après réflexion (${eur(ps.saved)} gardés), ${ps.bought} achetée(s) (${eur(ps.boughtTotal)}), ${eur(ps.pending)} en réflexion.`);
+  }
 
   return lines.join('\n');
 }

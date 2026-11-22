@@ -14,6 +14,7 @@ import type {
   CsvMapping,
   Goal,
   NetWorthSnapshot,
+  Pause,
   Provision,
   Rule,
   Settings,
@@ -30,6 +31,7 @@ export interface Data {
   goals: Goal[];
   snapshots: NetWorthSnapshot[];
   provisions: Provision[];
+  pauses: Pause[];
   taxProfile: TaxProfile;
   csvMapping: CsvMapping | null;
   settings: Settings;
@@ -67,6 +69,11 @@ interface Actions {
   updateProvision: (id: string, patch: Partial<Provision>) => void;
   deleteProvision: (id: string) => void;
 
+  addPause: (p: Omit<Pause, 'id' | 'createdAt' | 'status'>) => string;
+  decidePause: (id: string, status: Pause['status']) => void;
+  updatePause: (id: string, patch: Partial<Pause>) => void;
+  deletePause: (id: string) => void;
+
   recordSnapshot: (month: string, value: number) => void;
   setTaxProfile: (p: TaxProfile) => void;
   setCsvMapping: (m: CsvMapping) => void;
@@ -85,12 +92,13 @@ export const initialData = (): Data => ({
   goals: [],
   snapshots: [],
   provisions: [],
+  pauses: [],
   taxProfile: emptyProfile(),
   csvMapping: null,
   settings: { monthStartDay: 1, theme: 'system', onboarded: false },
 });
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const useStore = create<Data & Actions>()(
   persist(
@@ -234,6 +242,18 @@ export const useStore = create<Data & Actions>()(
       updateProvision: (id, patch) => set((s) => ({ provisions: s.provisions.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
       deleteProvision: (id) => set((s) => ({ provisions: s.provisions.filter((p) => p.id !== id) })),
 
+      addPause: (p) => {
+        const id = uid();
+        set((s) => ({ pauses: [{ ...p, id, createdAt: new Date().toISOString(), status: 'waiting' }, ...s.pauses] }));
+        return id;
+      },
+      decidePause: (id, status) =>
+        set((s) => ({
+          pauses: s.pauses.map((p) => (p.id === id ? { ...p, status, decidedAt: status === 'waiting' ? undefined : new Date().toISOString() } : p)),
+        })),
+      updatePause: (id, patch) => set((s) => ({ pauses: s.pauses.map((p) => (p.id === id ? { ...p, ...patch } : p)) })),
+      deletePause: (id) => set((s) => ({ pauses: s.pauses.filter((p) => p.id !== id) })),
+
       recordSnapshot: (month, value) =>
         set((s) => {
           const prev = s.snapshots.find((x) => x.month === month);
@@ -257,8 +277,8 @@ export const useStore = create<Data & Actions>()(
       migrate: (persisted, version) => migrateData(persisted as Partial<Data>, version) as never,
       storage: createJSONStorage(() => indexedDbStorage),
       partialize: (s) => {
-        const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
-        return { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings };
+        const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, pauses, taxProfile, csvMapping, settings } = s;
+        return { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, pauses, taxProfile, csvMapping, settings };
       },
       // Fusion profonde du profil fiscal : les nouveaux champs reçoivent une valeur par défaut.
       merge: (persisted, current) => {
@@ -330,15 +350,19 @@ export function migrateData(d: Partial<Data>, version: number): Partial<Data> {
       t.categoryId === 'exp-cash' && /retraite/i.test(t.label) && !/\bretrait\b/i.test(t.label) ? { ...t, categoryId: /epargne retraite|\bper\b/i.test(t.label) ? 'sav-per' : null } : t,
     );
   }
+  if (version < 6) {
+    // v6 : pauses avant achat
+    out.pauses = out.pauses ?? [];
+  }
   return out;
 }
 
 /** Export JSON complet, pour sauvegarde ou changement d'appareil. */
 export function exportData(): string {
   const s = useStore.getState();
-  const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } = s;
+  const { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, pauses, taxProfile, csvMapping, settings } = s;
   return JSON.stringify(
-    { app: 'cap-budget', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, taxProfile, csvMapping, settings } },
+    { app: 'cap-budget', version: SCHEMA_VERSION, exportedAt: new Date().toISOString(), data: { accounts, transactions, categories, budgets, rules, goals, snapshots, provisions, pauses, taxProfile, csvMapping, settings } },
     null,
     2,
   );

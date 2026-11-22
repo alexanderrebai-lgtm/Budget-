@@ -21,6 +21,7 @@ chiffrement de bout en bout au choix) s'appuie sur Supabase.
 - **Reconnaissance des enseignes**, 100 % locale : nettoyage du libellé (CB, PRLV, dates, cartes masquées, références), base d'environ 350 enseignes françaises avec leurs variantes d'écriture, mots-clés de type de commerce (boulangerie, pharmacie, pizzeria, garage…), apprentissage à partir de vos propres choix, nom de l'enseigne affiché dans la liste ; ordre de décision : vos règles → vos choix passés → enseigne → règles fournies → type de commerce
 - Création de règle en un clic, rapprochement des virements entre vos comptes
 - Budgets mensuels par catégorie, avec proposition d'après la moyenne des 3 derniers mois
+- Pause avant achat : une envie est notée avec son prix, un délai de réflexion (24 h à 30 jours, suggéré selon le prix) et une notification à la fin ; l'argent gardé grâce aux envies abandonnées est suivi. Chaque dépense peut être classée Besoin ou Envie, indépendamment de sa catégorie
 - Détection automatique des abonnements et prélèvements récurrents (coût annuel, prochaine échéance)
 - Tableau de bord : revenus/dépenses sur 6 mois, répartition, règle 50/30/20, alertes ; vue « foyer » ou « ma part » (comptes joints comptés à leur quote-part)
 - Prévision de trésorerie à 30/90/180 jours (prélèvements et revenus détectés, dépenses courantes lissées), alerte de découvert, calendrier des échéances

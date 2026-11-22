@@ -9,6 +9,7 @@ import { useConjoncture } from '../lib/conjoncture';
 import BriefCard from '../components/BriefCard';
 import { addMonths, dateLabel, euros, kEuros, money, money0, monthKey, monthLabel, percent, shortMonth, todayISO } from '../lib/format';
 import { upcomingEvents } from '../lib/planning';
+import { pauseStats, wantsSummary } from '../lib/pauses';
 import { useViewTransactions } from '../lib/useView';
 import { useStore } from '../store/store';
 import { computeTax } from '../tax/engine';
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const budgets = useStore((s) => s.budgets);
   const provisions = useStore((s) => s.provisions);
   const snapshots = useStore((s) => s.snapshots);
+  const pauses = useStore((s) => s.pauses);
   const taxProfile = useStore((s) => s.taxProfile);
   const ownerName = useStore((s) => s.settings.ownerName);
   const personalView = useStore((s) => s.settings.personalView ?? false);
@@ -131,6 +133,7 @@ export default function Dashboard() {
       <div className="stack">
         {/* 0. Bilan express : diagnostic immédiat */}
         <BriefCard brief={brief} est={est} />
+        <PauseStrip pauses={pauses} wantsTotal={wantsSummary(txs, cats, month).total} monthName={isCurrent ? 'ce mois-ci' : `en ${monthLabel(month).toLowerCase()}`} />
 
         {/* 1. Le mois et le patrimoine */}
         <div className="grid g3">
@@ -385,5 +388,29 @@ export default function Dashboard() {
         </div>
       </div>
     </>
+  );
+}
+
+/** Bandeau « Pause avant achat » : décisions en attente, argent gardé, ou invitation à essayer. */
+function PauseStrip({ pauses, wantsTotal, monthName }: { pauses: ReturnType<typeof useStore.getState>['pauses']; wantsTotal: number; monthName: string }) {
+  const st = pauseStats(pauses);
+  const waiting = pauses.filter((p) => p.status === 'waiting').length;
+  let text: React.ReactNode;
+  if (st.ready > 0) text = <><strong>{st.ready} pause{st.ready > 1 ? 's' : ''} terminée{st.ready > 1 ? 's' : ''}</strong> : toujours envie ? À vous de décider.</>;
+  else if (st.saved > 0 || waiting > 0)
+    text = (
+      <>
+        <strong className="num">{money0(st.saved)}</strong> gardés grâce à la pause avant achat
+        {waiting > 0 && <> · {waiting} envie{waiting > 1 ? 's' : ''} en réflexion</>}.
+      </>
+    );
+  else if (wantsTotal > 0) text = <>Vos envies ont coûté <strong className="num">{money0(wantsTotal)}</strong> {monthName}. Avant le prochain achat plaisir, faites une pause.</>;
+  else return null;
+  return (
+    <Link to="/pause" className={`pause-strip ${st.ready ? 'ready' : ''}`}>
+      <span className="pause-strip-ico" aria-hidden>⏸</span>
+      <span className="grow">{text}</span>
+      <span className="small">{st.ready ? 'Décider' : 'Pause avant achat'} ›</span>
+    </Link>
   );
 }

@@ -9,6 +9,15 @@ const withTx = (txs: Transaction[], patch: Partial<Data> = {}): Data => ({ ...in
 describe('fusion à trois voies', () => {
   const base = withTx([tx('1'), tx('2'), tx('3')]);
 
+  it('fusionne les pauses avant achat des deux appareils', () => {
+    const p = (id: string, status: 'waiting' | 'dropped' = 'waiting') => ({ id, item: id, amount: 1000, createdAt: 'x', until: 'y', status });
+    const b = withTx([], { pauses: [p('a')] });
+    const local = withTx([], { pauses: [p('a', 'dropped')] }); // décidée sur le PC
+    const remote = withTx([], { pauses: [p('a'), p('b')] }); // nouvelle envie notée sur le téléphone
+    const m = mergeData(b, local, remote);
+    expect(m.pauses.map((x) => [x.id, x.status]).sort()).toEqual([['a', 'dropped'], ['b', 'waiting']]);
+  });
+
   it('combine les ajouts des deux appareils', () => {
     const local = withTx([...base.transactions, tx('L')]);
     const remote = withTx([...base.transactions, tx('R')]);

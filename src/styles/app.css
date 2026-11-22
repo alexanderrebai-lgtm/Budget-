@@ -163,8 +163,8 @@ p { margin: 0; }
 .stat .sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
 
 /* Forms */
-label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); font-weight: 500; min-width: 0; }
-label.field .hint { font-weight: 400; color: var(--text-3); font-size: 11.5px; }
+label.field, div.field { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-2); font-weight: 500; min-width: 0; }
+label.field .hint, div.field .hint { font-weight: 400; color: var(--text-3); font-size: 11.5px; }
 input, select, textarea {
   font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: 8px 10px; min-width: 0; width: 100%;
@@ -343,3 +343,21 @@ details.lever ul { margin: 0; padding-left: 18px; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   margin-bottom: 16px; padding: 10px 14px; border-radius: var(--radius); background: var(--accent-soft); border: 1px solid var(--accent); font-size: 14px;
 }
+
+/* Pause avant achat */
+.pause-saved { font-size: 30px; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.pause-questions { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; color: var(--text-2); }
+.pause-ring { position: relative; width: 54px; height: 54px; flex: none; }
+.pause-ring > span { position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; }
+.pause-item { flex-wrap: wrap; }
+.pause-strip { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 14px; }
+.pause-strip:hover { border-color: var(--accent); }
+.pause-strip.ready { background: var(--accent-soft); border-color: var(--accent); }
+.pause-strip .grow { flex: 1; min-width: 0; }
+.pause-strip > span:last-child { color: var(--accent); font-weight: 600; white-space: nowrap; }
+.pause-strip-ico { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.need-toggle { display: inline-flex; gap: 2px; margin: 4px 0 0 6px; vertical-align: middle; }
+.need-toggle button { padding: 1px 8px; font-size: 11px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-3); }
+.need-toggle button.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+.need-toggle button.on.want { background: var(--warn-soft); color: var(--warn); }
+@media (max-width: 700px) { .pause-strip > span:last-child { display: none; } }

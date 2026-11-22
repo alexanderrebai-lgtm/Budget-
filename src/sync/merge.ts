@@ -59,6 +59,7 @@ export function mergeData(base: Data | null, local: Data, remote: Data): Data {
     rules: mergeCollection(base?.rules, local.rules, remote.rules, byId),
     goals: mergeCollection(base?.goals, local.goals, remote.goals, byId),
     provisions: mergeCollection(base?.provisions ?? [], local.provisions ?? [], remote.provisions ?? [], byId),
+    pauses: mergeCollection(base?.pauses ?? [], local.pauses ?? [], remote.pauses ?? [], byId),
     budgets: mergeCollection(base?.budgets, local.budgets, remote.budgets, (x) => x.categoryId),
     snapshots: mergeCollection(base?.snapshots, local.snapshots, remote.snapshots, (x) => x.month).sort((a, b) =>
       a.month.localeCompare(b.month),

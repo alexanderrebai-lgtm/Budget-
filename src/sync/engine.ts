@@ -109,7 +109,7 @@ export function deviceName(): string {
 
 /* ---------- Données synchronisées ---------- */
 
-const SYNC_KEYS = ['accounts', 'transactions', 'categories', 'budgets', 'rules', 'goals', 'snapshots', 'provisions', 'taxProfile', 'csvMapping', 'settings'] as const;
+const SYNC_KEYS = ['accounts', 'transactions', 'categories', 'budgets', 'rules', 'goals', 'snapshots', 'provisions', 'pauses', 'taxProfile', 'csvMapping', 'settings'] as const;
 
 function localData(): Data {
   const s = useStore.getState();

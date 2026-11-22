@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { computeAlerts, type Alert } from '../lib/alerts';
-import { todayISO } from '../lib/format';
+import { money, todayISO } from '../lib/format';
+import { duePauses } from '../lib/pauses';
 import { useStore, whenHydrated } from '../store/store';
 
 /** Réglages des rappels, propres à chaque appareil. */
@@ -69,6 +70,11 @@ export async function runReminders() {
     show(a);
     sent[a.id] = new Date().toISOString();
   }
+  // fins de pause avant achat
+  for (const p of duePauses(useStore.getState().pauses, sent)) {
+    show({ id: `pause:${p.id}`, level: 'info', title: 'Pause terminée', body: `${p.item} (${money(p.amount)}) : toujours envie ? Décidez en un clic.`, to: '/pause' });
+    sent[`pause:${p.id}`] = new Date().toISOString();
+  }
   // oubli des alertes de plus de 60 jours
   const cutoff = Date.now() - 60 * 86_400_000;
   for (const [k, v] of Object.entries(sent)) if (new Date(v).getTime() < cutoff) delete sent[k];
@@ -77,5 +83,6 @@ export async function runReminders() {
 
 export function startReminders() {
   setTimeout(() => void runReminders(), 6_000);
-  setInterval(() => void runReminders(), 3 * 3_600_000);
+  // toutes les 5 minutes : les fins de pause doivent arriver à l'heure ; les autres alertes ne partent qu'une fois
+  setInterval(() => void runReminders(), 5 * 60_000);
 }

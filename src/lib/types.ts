@@ -87,6 +87,24 @@ export interface Transaction {
   importHash?: string;
   /** Identifiant commun aux deux opérations d'un virement entre vos comptes. */
   transferId?: string;
+  /** Classement Besoin / Envie choisi pour cette opération (sinon celui de sa catégorie). */
+  need?: NeedGroup;
+}
+
+/** Délai de réflexion avant un achat non essentiel. */
+export interface Pause {
+  id: string;
+  /** Ce que l'on envisage d'acheter. */
+  item: string;
+  amount: Cents;
+  categoryId?: string | null;
+  /** Pourquoi on en a envie (réponse libre à la question de réflexion). */
+  reason?: string;
+  createdAt: string; // ISO date-heure
+  /** Fin du délai de réflexion. */
+  until: string; // ISO date-heure
+  status: 'waiting' | 'bought' | 'dropped';
+  decidedAt?: string;
 }
 
 export interface Budget {

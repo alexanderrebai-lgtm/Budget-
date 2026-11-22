@@ -1,5 +1,5 @@
 import { daysBetween, monthKey, normalize } from './format';
-import type { Account, Category, Cents, ISODate, Rule, Transaction } from './types';
+import type { Account, Category, Cents, ISODate, NeedGroup, Rule, Transaction } from './types';
 
 export function categorize(label: string, rules: Rule[]): string | null {
   const l = ` ${normalize(label).replace(/[*/_\-]/g, ' ')} `;
@@ -171,6 +171,12 @@ export function taxTotals(txs: Transaction[], cats: Map<string, Category>, year:
   return totals;
 }
 
+/** Groupe Besoin / Envie / Épargne d'une opération : choix propre à l'opération, sinon celui de sa catégorie. */
+export function needGroupOf(t: Transaction, cat: Category | undefined): NeedGroup | undefined {
+  if (cat?.kind === 'transfer') return cat.group;
+  return t.need ?? cat?.group;
+}
+
 /** Répartition 50/30/20 des sorties d'argent d'un mois. */
 export function needsWantsSavings(txs: Transaction[], cats: Map<string, Category>, month: string) {
   const r = { besoins: 0, envies: 0, epargne: 0, income: 0 };
@@ -178,8 +184,9 @@ export function needsWantsSavings(txs: Transaction[], cats: Map<string, Category
     if (monthKey(t.date) !== month) continue;
     const cat = t.categoryId ? cats.get(t.categoryId) : undefined;
     if (t.amount > 0 && cat?.kind !== 'transfer') { r.income += t.amount; continue; }
-    if (t.amount >= 0 || !cat?.group) continue;
-    r[cat.group] += -t.amount;
+    const g = needGroupOf(t, cat);
+    if (t.amount >= 0 || !g) continue;
+    r[g] += -t.amount;
   }
   return r;
 }

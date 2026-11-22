@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CategorySelect, Empty, NumberField, PageHead, Segmented, download, toast, useCategoryMap } from '../components/ui';
-import { merchantKey } from '../lib/analysis';
+import { merchantKey, needGroupOf } from '../lib/analysis';
 import { classify } from '../lib/merchants';
 import { dateLabel, money, monthKey, monthLabel, normalize, toCents, todayISO } from '../lib/format';
 import { useStore } from '../store/store';
 
-type Kind = 'all' | 'expense' | 'income' | 'uncat';
+type Kind = 'all' | 'expense' | 'income' | 'wants' | 'uncat';
 const PAGE = 150;
 
 export default function Transactions() {
@@ -42,11 +42,12 @@ export default function Transactions() {
         if (kind === 'expense' && t.amount >= 0) return false;
         if (kind === 'income' && t.amount < 0) return false;
         if (kind === 'uncat' && t.categoryId) return false;
+        if (kind === 'wants' && (t.amount >= 0 || needGroupOf(t, cats.get(t.categoryId ?? '')) !== 'envies')) return false;
         if (nq && !normalize(t.label).includes(nq) && !normalize(t.notes ?? '').includes(nq)) return false;
         return true;
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [txs, q, kind, account, category, month]);
+  }, [txs, q, kind, account, category, month, cats]);
 
   const total = filtered.reduce((s, t) => s + t.amount, 0);
   // nom d'enseigne reconnu (affiché à la place du libellé brut, qui reste visible en dessous)
@@ -147,6 +148,7 @@ export default function Transactions() {
                 { value: 'all', label: 'Toutes' },
                 { value: 'expense', label: 'Dépenses' },
                 { value: 'income', label: 'Revenus' },
+                { value: 'wants', label: 'Envies' },
                 { value: 'uncat', label: 'À classer' },
               ]}
             />
@@ -228,7 +230,22 @@ export default function Transactions() {
                           })()}
                         </div>
                       </td>
-                      <td><CategorySelect value={t.categoryId} onChange={(c) => changeCategory(t.id, t.label, c)} /></td>
+                      <td>
+                        <CategorySelect value={t.categoryId} onChange={(c) => changeCategory(t.id, t.label, c)} />
+                        {(() => {
+                          const cat = cats.get(t.categoryId ?? '');
+                          if (t.amount >= 0 || !cat || cat.kind !== 'expense') return null;
+                          const g = needGroupOf(t, cat);
+                          if (g === 'epargne') return null;
+                          const set = (v: 'besoins' | 'envies') => updateTransaction(t.id, { need: v === cat.group ? undefined : v });
+                          return (
+                            <div className="need-toggle" role="group" aria-label="Besoin ou envie">
+                              <button type="button" className={g === 'besoins' ? 'on' : ''} aria-pressed={g === 'besoins'} onClick={() => set('besoins')}>Besoin</button>
+                              <button type="button" className={g === 'envies' ? 'on want' : ''} aria-pressed={g === 'envies'} onClick={() => set('envies')}>Envie</button>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className={`amount ${t.amount >= 0 ? 'pos' : ''}`}>{money(t.amount)}</td>
                     </tr>
                   ))}
@@ -270,9 +287,9 @@ function AddForm({ onAdd, onDone }: { onAdd: ReturnType<typeof useStore.getState
     <Card title="Nouvelle opération">
       <form onSubmit={submit} className="stack">
         <div className="form-grid">
-          <label className="field"><span>Type</span>
+          <div className="field"><span>Type</span>
             <Segmented value={isIncome ? 'in' : 'out'} onChange={(v) => setIsIncome(v === 'in')} options={[{ value: 'out', label: 'Dépense' }, { value: 'in', label: 'Revenu' }]} />
-          </label>
+          </div>
           <label className="field"><span>Date</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} required /></label>
           <label className="field"><span>Libellé</span><input value={label} onChange={(e) => setLabel(e.target.value)} required placeholder="Ex. Boulangerie" /></label>
           <NumberField label="Montant" value={amount} onChange={setAmount} />
